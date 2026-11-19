@@ -1,0 +1,425 @@
+[
+ {
+  "id": "icon_001",
+  "file": "icon_001.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Limited Arena",
+  "name_ru": "Ограниченная арена"
+ },
+ {
+  "id": "icon_002",
+  "file": "icon_002.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Hindering Flasks",
+  "name_ru": "Сковывающие флаконы"
+ },
+ {
+  "id": "icon_004",
+  "file": "icon_004.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Lightning Damage from Mana Costs",
+  "name_ru": "Урон от молнии при расходе маны"
+ },
+ {
+  "id": "icon_005",
+  "file": "icon_005.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Shielding Monsters",
+  "name_ru": "Ограждающие монстры"
+ },
+ {
+  "id": "icon_006",
+  "file": "icon_006.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Razor Dance",
+  "name_ru": "Танец лезвий"
+ },
+ {
+  "id": "icon_007",
+  "file": "icon_007.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Unstoppable Monsters",
+  "name_ru": "Неудержимые монстры"
+ },
+ {
+  "id": "icon_008",
+  "file": "icon_008.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Blistering Cold",
+  "name_ru": "Обжигающий холод"
+ },
+ {
+  "id": "icon_009",
+  "file": "icon_009.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Resistant Monsters",
+  "name_ru": "Устойчивые монстры"
+ },
+ {
+  "id": "icon_010",
+  "file": "icon_010.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Siphoning Monsters",
+  "name_ru": "Вытягивающие монстры"
+ },
+ {
+  "id": "icon_011",
+  "file": "icon_011.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Escalating Monster Speed",
+  "name_ru": "Постоянное повышение скорости монстров"
+ },
+ {
+  "id": "icon_012",
+  "file": "icon_012.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Unlucky Criticals",
+  "name_ru": "Неудачливые критические удары"
+ },
+ {
+  "id": "icon_013",
+  "file": "icon_013.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Totem of Costly Might",
+  "name_ru": "Тотем дорогостоящей силы"
+ },
+ {
+  "id": "icon_014",
+  "file": "icon_014.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Totem of Costly Potency",
+  "name_ru": "Тотем дорогостоящего могущества"
+ },
+ {
+  "id": "icon_015",
+  "file": "icon_015.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Precise Monsters",
+  "name_ru": "Точные монстры"
+ },
+ {
+  "id": "icon_016",
+  "file": "icon_016.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Treacherous Auras",
+  "name_ru": "Предательские ауры"
+ },
+ {
+  "id": "icon_017",
+  "file": "icon_017.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Stormcaller Runes",
+  "name_ru": "Руны призывателя шторма"
+ },
+ {
+  "id": "icon_018",
+  "file": "icon_018.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Raging Dead",
+  "name_ru": "Неистовый мертвец"
+ },
+ {
+  "id": "icon_019",
+  "file": "icon_019.png",
+  "name": "",
+  "tier": "Free",
+  "allowed": true,
+  "name_en": "Lethal Rare Monsters",
+  "name_ru": "Беспощадные редкие монстры"
+ },
+ {
+  "id": "icon_020",
+  "file": "icon_020.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Dexterous Monsters",
+  "name_ru": "Проворные монстры"
+ },
+ {
+  "id": "icon_021",
+  "file": "icon_021.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Less Cooldown Recovery",
+  "name_ru": "Замедление перезарядки"
+ },
+ {
+  "id": "icon_022",
+  "file": "icon_022.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Buffs Expire Faster",
+  "name_ru": "Быстрое истечение положительных эффектов"
+ },
+ {
+  "id": "icon_040",
+  "file": "icon_040.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Random Projectiles",
+  "name_ru": "Случайные снаряды"
+ },
+ {
+  "id": "icon_041",
+  "file": "icon_041.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Restless Ground (Zombies)",
+  "name_ru": "Беспокойная земля (зомби)"
+ },
+ {
+  "id": "icon_042",
+  "file": "icon_042.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Restless Ground (Phantasms)",
+  "name_ru": "Беспокойная земля (фантазмы)"
+ },
+ {
+  "id": "icon_043",
+  "file": "icon_043.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Quicksand",
+  "name_ru": "Зыбучие пески"
+ },
+ {
+  "id": "icon_044",
+  "file": "icon_044.png",
+  "name": "",
+  "tier": "Easy",
+  "allowed": true,
+  "name_en": "Impenetrable Monsters",
+  "name_ru": "Непробиваемые монстры"
+ },
+ {
+  "id": "icon_025",
+  "file": "icon_025.png",
+  "name": "",
+  "tier": "Moderate",
+  "allowed": true,
+  "name_en": "Prismatic Monsters",
+  "name_ru": "Радужные монстры"
+ },
+ {
+  "id": "icon_026",
+  "file": "icon_026.png",
+  "name": "",
+  "tier": "Moderate",
+  "allowed": true,
+  "name_en": "Profane Monsters",
+  "name_ru": "Нечестивые монстры"
+ },
+ {
+  "id": "icon_027",
+  "file": "icon_027.png",
+  "name": "",
+  "tier": "Moderate",
+  "allowed": true,
+  "name_en": "Overwhelming Monsters",
+  "name_ru": "Подавляющие монстры"
+ },
+ {
+  "id": "icon_028",
+  "file": "icon_028.png",
+  "name": "",
+  "tier": "Moderate",
+  "allowed": true,
+  "name_en": "Choking Miasma",
+  "name_ru": "Удушающие испарения"
+ },
+ {
+  "id": "icon_049",
+  "file": "icon_049.png",
+  "name": "",
+  "tier": "Moderate",
+  "allowed": true,
+  "name_en": "Waning Spirit",
+  "name_ru": "Угасающий дух"
+ },
+ {
+  "id": "icon_029",
+  "file": "icon_029.png",
+  "name": "",
+  "tier": "Annoying",
+  "allowed": true,
+  "name_en": "Occasional Impotence",
+  "name_ru": "Случайное бессилие"
+ },
+ {
+  "id": "icon_030",
+  "file": "icon_030.png",
+  "name": "",
+  "tier": "Annoying",
+  "allowed": true,
+  "name_en": "Blood Altar",
+  "name_ru": "Алтарь крови"
+ },
+ {
+  "id": "icon_031",
+  "file": "icon_031.png",
+  "name": "",
+  "tier": "Annoying",
+  "allowed": true,
+  "name_en": "Lessened Reach",
+  "name_ru": "Уменьшение досягаемости"
+ },
+ {
+  "id": "icon_032",
+  "file": "icon_032.png",
+  "name": "",
+  "tier": "Annoying",
+  "allowed": false,
+  "name_en": "Ruin",
+  "name_ru": "Гибель"
+ },
+ {
+  "id": "icon_033",
+  "file": "icon_033.png",
+  "name": "",
+  "tier": "DO NOT TAKE",
+  "allowed": false,
+  "name_en": "Escalating Damage Taken",
+  "name_ru": "Постоянное повышение получаемого урона"
+ },
+ {
+  "id": "icon_034",
+  "file": "icon_034.png",
+  "name": "",
+  "tier": "DO NOT TAKE",
+  "allowed": false,
+  "name_en": "Reduced Recovery",
+  "name_ru": "Уменьшенное восстановление"
+ },
+ {
+  "id": "icon_035",
+  "file": "icon_035.png",
+  "name": "",
+  "tier": "DO NOT TAKE",
+  "allowed": false,
+  "name_en": "Stalking Ruin",
+  "name_ru": "Крадущаяся гибель"
+ },
+ {
+  "id": "icon_045",
+  "file": "icon_045.png",
+  "name": "",
+  "tier": "DO NOT TAKE",
+  "allowed": false,
+  "name_en": "Impurity",
+  "name_ru": "Нечестивость"
+ },
+ {
+  "id": "icon_046",
+  "file": "icon_046.png",
+  "name": "",
+  "tier": "DO NOT TAKE",
+  "allowed": false,
+  "name_en": "Restless Ground (Ruin Zombies)",
+  "name_ru": "Беспокойная земля (зомби, гибель)"
+ },
+ {
+  "id": "icon_047",
+  "file": "icon_047.png",
+  "name": "",
+  "tier": "DO NOT TAKE",
+  "allowed": false,
+  "name_en": "Restless Ground (Ruin Phantasms)",
+  "name_ru": "Беспокойная земля (фантазмы, гибель)"
+ },
+ {
+  "id": "icon_003",
+  "file": "icon_003.png",
+  "name": "",
+  "tier": "Exception",
+  "allowed": false,
+  "name_en": "Shattered Shield",
+  "name_ru": "Расколотый щит"
+ },
+ {
+  "id": "icon_036",
+  "file": "icon_036.png",
+  "name": "",
+  "tier": "Exception",
+  "allowed": false,
+  "name_en": "Ailment and Curse Reflection",
+  "name_ru": "Отражение состояний и проклятий"
+ },
+ {
+  "id": "icon_037",
+  "file": "icon_037.png",
+  "name": "",
+  "tier": "Exception",
+  "allowed": false,
+  "name_en": "Deadly Monsters",
+  "name_ru": "Смертоносные монстры"
+ },
+ {
+  "id": "icon_038",
+  "file": "icon_038.png",
+  "name": "",
+  "tier": "Exception",
+  "allowed": false,
+  "name_en": "Siphoned Charges",
+  "name_ru": "Исчезающие заряды"
+ },
+ {
+  "id": "icon_039",
+  "file": "icon_039.png",
+  "name": "",
+  "tier": "Exception",
+  "allowed": false,
+  "name_en": "Drought",
+  "name_ru": "Засуха"
+ },
+ {
+  "id": "icon_048",
+  "file": "icon_048.png",
+  "name": "",
+  "tier": "Exception",
+  "allowed": false,
+  "name_en": "Putrid Monsters",
+  "name_ru": "Тлетворные монстры"
+ }
+]

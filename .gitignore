@@ -1,0 +1,13 @@
+# кэш и настройки, которые программа создаёт при запуске из исходников
+config.json
+prices_cache.json
+names_ru.json
+leagues.json
+my_prices.json
+
+# сборка
+__pycache__/
+*.pyc
+build/
+dist/
+*.spec

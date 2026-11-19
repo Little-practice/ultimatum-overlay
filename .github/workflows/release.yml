@@ -1,0 +1,69 @@
+# Сборка exe на сервере GitHub из этого кода и выпуск (Release).
+# Запускается, когда в репозиторий отправляют метку версии, например: git tag v1.0.0 && git push origin v1.0.0
+# Builds the exe on GitHub's servers from this exact code and publishes a Release.
+name: Build and release
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller==6.19.0
+
+      - name: Build exe
+        run: >
+          python -m PyInstaller --noconfirm --onefile --windowed
+          --name UltimatumOverlay --icon app.ico
+          --add-data "icons;icons_default"
+          --hidden-import pystray._win32
+          main.py
+
+      - name: Checksum
+        shell: pwsh
+        run: |
+          $h = (Get-FileHash dist\UltimatumOverlay.exe -Algorithm SHA256).Hash
+          "$h  UltimatumOverlay.exe" | Out-File -Encoding ascii dist\UltimatumOverlay.exe.sha256
+          @"
+          **Скачать / Download:** ``UltimatumOverlay.exe`` ниже / below.
+
+          Собрано автоматически на серверах GitHub из коммита $env:GITHUB_SHA — exe соответствует открытому коду этого репозитория.
+          Built automatically by GitHub Actions from commit $env:GITHUB_SHA — the exe matches the open source code of this repository.
+
+          SHA256: ``$h``
+
+          Что нового / What's new: [CHANGELOG.md](https://github.com/$env:GITHUB_REPOSITORY/blob/main/CHANGELOG.md)
+          "@ | Out-File -Encoding utf8 release_notes.md
+
+      - name: Upload build (for manual runs)
+        uses: actions/upload-artifact@v4
+        with:
+          name: UltimatumOverlay
+          path: |
+            dist/UltimatumOverlay.exe
+            dist/UltimatumOverlay.exe.sha256
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: Ultimatum Overlay ${{ github.ref_name }}
+          body_path: release_notes.md
+          files: |
+            dist/UltimatumOverlay.exe
+            dist/UltimatumOverlay.exe.sha256

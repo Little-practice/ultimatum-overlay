@@ -1,0 +1,54 @@
+name: "Ошибка / Bug report"
+description: "Что-то работает не так / Something doesn't work"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо, что сообщаешь об ошибке! Пиши на русском или английском.
+        Thanks for reporting! Russian or English is fine.
+  - type: input
+    id: version
+    attributes:
+      label: "Версия программы / App version"
+      description: "Видна внизу окна, например v1.0.0 / Shown at the bottom of the window"
+      placeholder: "v1.0.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: client
+    attributes:
+      label: "Язык клиента игры / Game client language"
+      options:
+        - "Русский / Russian"
+        - "Английский / English"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: "Что не работает / What is broken"
+      options:
+        - "Цены по Ctrl+C / Price check"
+        - "Подсказка модов / Modifier hints"
+        - "Рамка «Удвоить» / Double Down highlight"
+        - "Окно программы / Settings window"
+        - "Другое / Other"
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: "Что произошло и что ожидалось / What happened and what you expected"
+    validations:
+      required: true
+  - type: textarea
+    id: screens
+    attributes:
+      label: "Скриншоты / Screenshots"
+      description: "Скриншот игры с окном ультиматума или карточкой цены очень помогает / A screenshot helps a lot"
+  - type: input
+    id: resolution
+    attributes:
+      label: "Разрешение экрана и режим игры / Screen resolution and game window mode"
+      placeholder: "2560x1440, Windowed Fullscreen"

@@ -1,0 +1,7 @@
+mss==10.2.0
+numpy==2.4.2
+opencv-python==5.0.0.93
+pyperclip==1.11.0
+requests==2.34.2
+pystray==0.19.5
+pillow==11.3.0
