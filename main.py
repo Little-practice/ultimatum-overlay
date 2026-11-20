@@ -11,7 +11,7 @@ import threading
 import time
 import tkinter as tk
 import webbrowser
-from tkinter import ttk
+from tkinter import filedialog, ttk
 
 import pyperclip
 
@@ -19,7 +19,7 @@ import i18n
 import icon_data
 import icons
 import theme as T
-from hotkeys import MOD_CTRL, MOD_SHIFT, Hotkey, KeyWatch, beep, key_name
+from hotkeys import MOD_CTRL, MOD_SHIFT, Hotkey, KeyWatch, beep, custom_sound_path, key_name
 from i18n import tr
 from overlay import Overlay
 from paths import APP_DIR, restore_default_icons, write_json
@@ -320,6 +320,8 @@ class App:
         T.Toggle(r, self.cfg["sound"], lambda v: (self.set_flag("sound", v), v and beep("info"))).pack(
             side="left", padx=(30, 0))
         T.label(r, tr("sound"), size=9).pack(side="left", padx=8)
+        T.button(r, tr("own_sound"), self.pick_sound, small=True).pack(side="left", padx=(4, 0))
+        T.button(r, tr("std_sound"), self.reset_sound, small=True, fg=T.MUTED).pack(side="left", padx=(6, 0))
         T.wrap_label(c, tr("key_hint"), size=8).pack(fill="x", pady=(6, 0))
         r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(10, 0))
         T.Toggle(r, system.autostart_enabled(), self.autostart_toggled).pack(side="left")
@@ -500,6 +502,31 @@ class App:
         self.pw = PricesWindow(self.root, self.prices, on_change=lambda: self.log(tr("custom_saved")),
                                names_lang=self.cfg.get("names_lang") or i18n.LANG,
                                on_names_lang=lambda c: (self.cfg.__setitem__("names_lang", c), self.save_cfg()))
+
+    # ---------------- свой звук ----------------
+    def pick_sound(self):
+        path = filedialog.askopenfilename(title=tr("sound_pick"), filetypes=[("WAV", "*.wav")])
+        if not path:
+            return
+        try:
+            import shutil
+            import wave
+            with wave.open(path, "rb") as w:      # проверим, что это настоящий WAV
+                w.getnframes()
+            shutil.copyfile(path, custom_sound_path())
+            self.log(tr("sound_set", n=os.path.basename(path)))
+            beep("info")
+        except Exception:
+            self.log(tr("sound_bad"))
+
+    def reset_sound(self):
+        try:
+            if os.path.exists(custom_sound_path()):
+                os.remove(custom_sound_path())
+        except OSError:
+            pass
+        self.log(tr("sound_reset"))
+        beep("info")
 
     # ---------------- обмен галочками ----------------
     def copy_mods(self):
@@ -843,9 +870,6 @@ class App:
                             marks, waves, status = self.advisor.advise(mods)
                             key = tuple(marks)
                             if key != last_mods_key:
-                                bad = any(code in ("no", "unknown") for _, code, _ in marks)
-                                if bad and self.cfg["sound"] and not self.hidden and last_mods_key != "force":
-                                    beep("alert")
                                 self.ui.put(("clear", "mod"))
                                 for i, code, color in marks:
                                     self.ui.put(("box", f"mod{i}", *mod_box(i), tr("chip_" + code), color,

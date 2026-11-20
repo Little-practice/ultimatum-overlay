@@ -50,6 +50,89 @@ class Hotkey(threading.Thread):
 _SOUNDS = {}
 
 
+def _render(samples, rate=44100):
+    import io
+    import struct
+    import wave
+    peak = max(1e-9, max(abs(s) for s in samples))
+    frames = b"".join(struct.pack("<h", int(s / peak * 0.95 * 32767)) for s in samples)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(frames)
+    return buf.getvalue()
+
+
+def _tone(f, dur, square=False, attack=0.004, release=0.05, rate=44100):
+    import math
+    out = []
+    for i in range(int(rate * dur)):
+        t = i / rate
+        env = min(1.0, t / attack, (dur - t) / release)
+        ph = 2 * math.pi * f * t
+        v = math.tanh(4 * math.sin(ph)) if square else (
+            math.sin(ph) + 0.5 * math.sin(2 * ph) + 0.3 * math.sin(3 * ph) + 0.15 * math.sin(5 * ph))
+        out.append(env * v)
+    return out
+
+
+def _match_found():
+    """Громкий заметный сигнал «матч найден»: быстрая восходящая трель и высокая нота, дважды."""
+    s = []
+    for _ in range(2):
+        for f in (784, 988, 1175):
+            s += _tone(f, 0.07, release=0.02)
+        s += _tone(1568, 0.22, release=0.12)
+        s += [0.0] * int(44100 * 0.08)
+    return _render(s)
+
+
+def _alarm():
+    """Резкий двухтоновый сигнал — запрещённый мод."""
+    s = []
+    for _ in range(3):
+        s += _tone(1400, 0.11, square=True, release=0.01) + _tone(1050, 0.11, square=True, release=0.01)
+    return _render(s)
+
+
+def _harp3():
+    """Стандартный звук «Удвоить»: глиссандо арфы вверх по 9 струнам, три раза подряд."""
+    import numpy as np
+    sr = 44100
+    rng = np.random.default_rng(27)
+
+    def pluck(f, d=1.0, damp=0.996):        # струна (алгоритм Карплуса-Стронга)
+        n, p = int(sr * d), max(2, int(sr / f))
+        buf = rng.uniform(-1, 1, p)
+        out = np.zeros(n)
+        for i in range(n):
+            j = i % p
+            out[i] = buf[j]
+            buf[j] = damp * 0.5 * (buf[j] + buf[(i + 1) % p])
+        return out
+
+    notes = (392, 494, 587, 698, 784, 988, 1175, 1397, 1568)
+    strings = [pluck(f) for f in notes]
+    gliss = np.zeros(int(sr * 1.6))
+    for k, st in enumerate(strings):
+        i = int(sr * 0.045 * k)
+        n = min(len(st), len(gliss) - i)
+        gliss[i:i + n] += 0.45 * st[:n]
+    total = np.zeros(int(sr * (0.62 * 2)) + len(gliss))
+    for k in range(3):
+        i = int(sr * 0.62 * k)
+        total[i:i + len(gliss)] += gliss
+    return _render(total.tolist())
+
+
+def custom_sound_path():
+    from paths import APP_DIR
+    import os
+    return os.path.join(APP_DIR, "custom_sound.wav")
+
+
 def _chime(freqs, note=0.11, gap=0.03, volume=0.45, rate=44100):
     """Короткий сигнал из нескольких нот (WAV в памяти), с плавным началом и концом каждой ноты."""
     import io
@@ -78,9 +161,14 @@ def beep(kind="alert"):
     "info" — вверх (появилась «Удвоить»), "alert" — вниз (запрещённый мод)."""
     def play():
         try:
+            import os
             import winsound
+            custom = custom_sound_path()
+            if os.path.exists(custom):          # свой звук игрока
+                winsound.PlaySound(custom, winsound.SND_FILENAME | winsound.SND_NODEFAULT)
+                return
             if kind not in _SOUNDS:
-                _SOUNDS[kind] = _chime((880, 1320) if kind == "info" else (740, 494, 494))
+                _SOUNDS[kind] = _harp3() if kind == "info" else _alarm()
             winsound.PlaySound(_SOUNDS[kind], winsound.SND_MEMORY | winsound.SND_NODEFAULT)
         except Exception:
             pass
