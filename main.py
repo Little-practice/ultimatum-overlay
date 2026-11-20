@@ -317,7 +317,8 @@ class App:
         self.key_btn.pack(side="left", padx=(8, 8))
         self.hidden_lbl = T.label(r, "", size=9, bold=True)
         self.hidden_lbl.pack(side="left")
-        T.Toggle(r, self.cfg["sound"], lambda v: self.set_flag("sound", v)).pack(side="left", padx=(30, 0))
+        T.Toggle(r, self.cfg["sound"], lambda v: (self.set_flag("sound", v), v and beep("info"))).pack(
+            side="left", padx=(30, 0))
         T.label(r, tr("sound"), size=9).pack(side="left", padx=8)
         T.wrap_label(c, tr("key_hint"), size=8).pack(fill="x", pady=(6, 0))
         r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(10, 0))

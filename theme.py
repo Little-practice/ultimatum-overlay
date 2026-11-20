@@ -141,7 +141,12 @@ def pill(cv, x1, y1, x2, y2, **kw):
 
 
 def round_rect(cv, x1, y1, x2, y2, r, **kw):
+    """Скруглённый прямоугольник: ровные стороны и дуги по 10 точек в каждом углу."""
+    import math
     r = max(0, min(r, (x2 - x1) / 2, (y2 - y1) / 2))
-    pts = [x1 + r, y1, x2 - r, y1, x2, y1, x2, y1 + r, x2, y2 - r, x2, y2, x2 - r, y2, x1 + r, y2,
-           x1, y2, x1, y2 - r, x1, y1 + r, x1, y1]
-    return cv.create_polygon(pts, smooth=True, **kw)
+    pts = []
+    for cx, cy, a0 in ((x2 - r, y1 + r, -90), (x2 - r, y2 - r, 0), (x1 + r, y2 - r, 90), (x1 + r, y1 + r, 180)):
+        for i in range(11):
+            a = math.radians(a0 + 9 * i)
+            pts += [cx + r * math.cos(a), cy + r * math.sin(a)]
+    return cv.create_polygon(pts, smooth=False, **kw)

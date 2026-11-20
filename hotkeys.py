@@ -47,12 +47,41 @@ class Hotkey(threading.Thread):
             self.join(timeout=1)
 
 
+_SOUNDS = {}
+
+
+def _chime(freqs, note=0.11, gap=0.03, volume=0.45, rate=44100):
+    """Короткий сигнал из нескольких нот (WAV в памяти), с плавным началом и концом каждой ноты."""
+    import io
+    import math
+    import struct
+    import wave
+    frames = bytearray()
+    for f in freqs:
+        n = int(rate * note)
+        for i in range(n):
+            env = min(1.0, i / (rate * 0.008), (n - i) / (rate * 0.04))
+            v = volume * env * (math.sin(2 * math.pi * f * i / rate) + 0.3 * math.sin(4 * math.pi * f * i / rate))
+            frames += struct.pack("<h", int(max(-1, min(1, v / 1.3)) * 32767))
+        frames += b"\x00\x00" * int(rate * gap)
+    buf = io.BytesIO()
+    with wave.open(buf, "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(rate)
+        w.writeframes(bytes(frames))
+    return buf.getvalue()
+
+
 def beep(kind="alert"):
-    """Короткий системный звук (не блокирует)."""
+    """Свой короткий сигнал (не зависит от звуковой схемы Windows, не блокирует):
+    "info" — вверх (появилась «Удвоить»), "alert" — вниз (запрещённый мод)."""
     def play():
         try:
             import winsound
-            winsound.MessageBeep(winsound.MB_ICONEXCLAMATION if kind == "alert" else winsound.MB_ICONASTERISK)
+            if kind not in _SOUNDS:
+                _SOUNDS[kind] = _chime((880, 1320) if kind == "info" else (740, 494, 494))
+            winsound.PlaySound(_SOUNDS[kind], winsound.SND_MEMORY | winsound.SND_NODEFAULT)
         except Exception:
             pass
     threading.Thread(target=play, daemon=True).start()
