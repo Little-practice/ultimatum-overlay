@@ -22,7 +22,7 @@ import theme as T
 from hotkeys import MOD_CTRL, MOD_SHIFT, Hotkey, KeyWatch, beep, custom_sound_path, key_name
 from i18n import tr
 from overlay import Overlay
-from paths import APP_DIR, restore_default_icons, write_json
+from paths import APP_DIR, ensure_initial_file, restore_default_icons, write_json
 from prices import Prices
 from prices_window import PricesWindow
 import share
@@ -30,7 +30,7 @@ import system
 from screen import DD_BOX, Screen, clipboard_seq, cursor_pos, poe_running
 from watcher import GREEN, ModAdvisor, is_item_text, mod_box, price_info
 
-VERSION = "1.0.0"
+VERSION = "1.2.0"
 CFG_FILE = os.path.join(APP_DIR, "config.json")
 DEFAULT_CFG = {
     "lang": "ru",
@@ -165,6 +165,9 @@ class App:
         root.configure(bg=T.BG)
         T.apply_ttk(root)
         self.cfg = load_cfg()
+        ensure_initial_file("names_ru.json")
+        ensure_initial_file("prices_cache.json")
+        ensure_initial_file("leagues.json")
         i18n.set_lang(self.cfg["lang"])
         self.scr = Screen()
         self.scr.dx, self.scr.dy = self.cfg["offset_x"], self.cfg["offset_y"]

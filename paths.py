@@ -1,8 +1,8 @@
 """Где программа хранит свои данные.
 - Собранный .exe: настройки, список модов и кэш цен — в %APPDATA%\\UltimatumOverlay
   (exe можно кинуть куда угодно, рядом с ним ничего не создаётся).
-  Тир-лист по умолчанию зашит внутрь exe (BUNDLE_DIR/icons_default).
-- Запуск из исходников: всё рядом с main.py, тир-лист по умолчанию — папка icons."""
+  Тир-лист по умолчанию и базовые файлы (словарь, цены, лиги) зашиты внутрь exe.
+- Запуск из исходников: всё рядом с main.py."""
 import json
 import os
 import shutil
@@ -15,8 +15,26 @@ if getattr(sys, "frozen", False):
     DEFAULT_ICONS = os.path.join(BUNDLE_DIR, "icons_default")
 else:
     APP_DIR = os.path.dirname(os.path.abspath(__file__))
+    BUNDLE_DIR = APP_DIR
     DEFAULT_ICONS = os.path.join(APP_DIR, "icons")
 os.makedirs(APP_DIR, exist_ok=True)
+
+
+def bundled_file(filename):
+    """Путь к файлу, зашитому в сборку (или рядом с исходниками)."""
+    return os.path.join(BUNDLE_DIR, filename)
+
+
+def ensure_initial_file(filename):
+    """Если файла нет в APPDATA, но он зашит в сборку — безопасно копируем его в APPDATA."""
+    dst = os.path.join(APP_DIR, filename)
+    src = bundled_file(filename)
+    if not os.path.exists(dst) and os.path.exists(src):
+        try:
+            shutil.copyfile(src, dst)
+        except Exception:
+            pass
+    return dst
 
 
 _write_lock = threading.Lock()

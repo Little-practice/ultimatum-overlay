@@ -45,7 +45,7 @@
 ### Собрать самому
 ```
 pip install -r requirements.txt pyinstaller
-python -m PyInstaller --onefile --windowed --name UltimatumOverlay --icon app.ico --add-data "icons;icons_default" --hidden-import pystray._win32 main.py
+python -m PyInstaller --onefile --windowed --name UltimatumOverlay --icon app.ico --add-data "icons;icons_default" --add-data "names_ru.json;." --add-data "prices_cache.json;." --add-data "leagues.json;." --hidden-import pystray._win32 main.py
 ```
 Или запустить из исходников: `python main.py`.
 
@@ -92,7 +92,7 @@ It **never presses anything for you**: it only looks at the screen and the clipb
 ### Build it yourself
 ```
 pip install -r requirements.txt pyinstaller
-python -m PyInstaller --onefile --windowed --name UltimatumOverlay --icon app.ico --add-data "icons;icons_default" --hidden-import pystray._win32 main.py
+python -m PyInstaller --onefile --windowed --name UltimatumOverlay --icon app.ico --add-data "icons;icons_default" --add-data "names_ru.json;." --add-data "prices_cache.json;." --add-data "leagues.json;." --hidden-import pystray._win32 main.py
 ```
 Or run from source: `python main.py`.
 

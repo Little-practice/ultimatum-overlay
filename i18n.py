@@ -55,8 +55,8 @@ S = {
     "chip_no": ("НЕЛЬЗЯ", "NO"),
     "chip_unknown": ("НЕ ЗНАЮ", "UNKNOWN"),
     "your_price": ("✎  твоя цена", "✎  your price"),
-    "low_data": ("?  мало данных — цена ненадёжна", "?  little data — price is unreliable"),
-    "low_data_short": ("мало данных", "little data"),
+    "low_data": ("?  неточные данные (мало сделок на рынке)", "?  approximate data (few market trades)"),
+    "low_data_short": ("неточные данные", "approximate"),
     "net_profit": ("чистая прибыль", "net profit"),
     "poe_found": ("● PoE найден", "● PoE found"),
     "poe_missing": ("● PoE не найден", "● PoE not found"),
@@ -170,15 +170,39 @@ S = {
 }
 
 CATS = {
+    # General
     "Currency": ("Валюта", "Currency"), "Fragment": ("Фрагменты", "Fragments"),
-    "DivinationCard": ("Гадальные карты", "Divination cards"), "Scarab": ("Скарабеи", "Scarabs"),
-    "Essence": ("Сущности", "Essences"), "Fossil": ("Ископаемые", "Fossils"), "Resonator": ("Резонаторы", "Resonators"),
-    "Oil": ("Масла", "Oils"), "Omen": ("Знамения", "Omens"), "DeliriumOrb": ("Сферы Делириума", "Delirium orbs"),
-    "Tattoo": ("Татуировки", "Tattoos"), "Artifact": ("Артефакты", "Artifacts"),
+    "Runegraft": ("Рунограммы", "Runegrafts"), "AllflameEmber": ("Угли Всепламени", "Allflame Embers"),
+    "Tattoo": ("Татуировки", "Tattoos"), "Omen": ("Знамения", "Omens"),
+    "DjinnCoin": ("Монеты джиннов", "Djinn Coins"), "Ducat": ("Дукаты", "Ducats"),
+    "EnshroudingCrystal": ("Затуманивающие кристаллы", "Enshrouding Crystals"),
+    "DivinationCard": ("Гадальные карты", "Divination cards"), "Artifact": ("Артефакты", "Artifacts"),
+    "Oil": ("Масла", "Oils"), "Incubator": ("Инкубаторы", "Incubators"),
+    "Wombgift": ("Дары утробы", "Wombgifts"), "Corpse": ("Трупы", "Corpses"),
+    "Viscera": ("Внутренности", "Viscera"),
+
+    # Equipment & Gems
     "UniqueWeapon": ("Уник. оружие", "Unique weapons"), "UniqueArmour": ("Уник. броня", "Unique armour"),
-    "UniqueAccessory": ("Уник. бижутерия", "Unique accessories"), "UniqueJewel": ("Уник. самоцветы", "Unique jewels"),
-    "UniqueFlask": ("Уник. флаконы", "Unique flasks"), "UniqueMap": ("Уник. карты", "Unique maps"),
-    "Map": ("Карты", "Maps"), "Invitation": ("Приглашения", "Invitations"), "Beast": ("Звери", "Beasts"),
+    "UniqueAccessory": ("Уник. бижутерия", "Unique accessories"), "UniqueFlask": ("Уник. флаконы", "Unique flasks"),
+    "UniqueJewel": ("Уник. самоцветы", "Unique jewels"), "ForbiddenJewel": ("Запретные самоцветы", "Forbidden jewels"),
+    "ShrineBelt": ("Пояса святилища", "Shrine belts"), "UniqueTincture": ("Уник. настойки", "Unique tinctures"),
+    "UniqueRelic": ("Уник. реликвии", "Unique relics"), "SkillGem": ("Камни умений", "Skill gems"),
+    "ImbuedGem": ("Насыщенные камни", "Imbued gems"), "ClusterJewel": ("Кластерные самоцветы", "Cluster jewels"),
+
+    # Atlas
+    "Map": ("Карты", "Maps"), "BlightedMap": ("Заражённые карты", "Blighted maps"),
+    "BlightRavagedMap": ("Разорённые карты", "Blight-ravaged maps"), "UniqueMap": ("Уник. карты", "Unique maps"),
+    "ValdoMap": ("Карты Валдо", "Valdo maps"), "DeliriumOrb": ("Сферы Делириума", "Delirium orbs"),
+    "Invitation": ("Приглашения", "Invitations"), "Scarab": ("Скарабеи", "Scarabs"),
+    "Astrolabe": ("Астролябии", "Astrolabes"), "Thread": ("Нити", "Threads"),
+    "Memory": ("Воспоминания", "Memories"), "IncursionTemple": ("Храмы Ацоатль", "Incursion temples"),
+    "ScryingOrb": ("Сферы гадания", "Scrying orbs"),
+
+    # Crafting
+    "BaseType": ("Базовые предметы", "Base types"), "Flask": ("Флаконы", "Flasks"),
+    "Fossil": ("Ископаемые", "Fossils"), "Resonator": ("Резонаторы", "Resonators"),
+    "Beast": ("Звери", "Beasts"), "Essence": ("Сущности", "Essences"),
+    "Vial": ("Флаконы жертвоприношения", "Vials"),
 }
 
 
