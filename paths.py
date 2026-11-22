@@ -25,15 +25,24 @@ def bundled_file(filename):
     return os.path.join(BUNDLE_DIR, filename)
 
 
-def ensure_initial_file(filename):
-    """Если файла нет в APPDATA, но он зашит в сборку — безопасно копируем его в APPDATA."""
+def ensure_initial_file(filename, overwrite_if_newer=False):
+    """Если файла нет в APPDATA, но он зашит в сборку — безопасно копируем его в APPDATA.
+    Если overwrite_if_newer=True и зашитый файл отличается размером или новее — обновляем."""
     dst = os.path.join(APP_DIR, filename)
     src = bundled_file(filename)
-    if not os.path.exists(dst) and os.path.exists(src):
-        try:
-            shutil.copyfile(src, dst)
-        except Exception:
-            pass
+    if os.path.exists(src):
+        should_copy = not os.path.exists(dst)
+        if not should_copy and overwrite_if_newer:
+            try:
+                should_copy = (os.path.getsize(src) != os.path.getsize(dst) or
+                               os.path.getmtime(src) > os.path.getmtime(dst))
+            except Exception:
+                pass
+        if should_copy:
+            try:
+                shutil.copyfile(src, dst)
+            except Exception:
+                pass
     return dst
 
 

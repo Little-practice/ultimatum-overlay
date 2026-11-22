@@ -23,9 +23,10 @@ TIER_COLORS = {"Free": "#ff7f7f", "Easy": "#ffbf7f", "Moderate": "#ffdf7f", "Ann
 
 # цвета названий предметов как в игре
 RARITY_COLORS = {"currency": "#aa9e82", "валюта": "#aa9e82", "unique": "#af6025", "уникальный": "#af6025",
-                 "divination card": "#d8e6f0", "гадальная карта": "#d8e6f0", "gem": "#1ba29b", "камень": "#1ba29b",
+                 "divination card": "#d8e6f0", "divination": "#d8e6f0", "card": "#d8e6f0", "гадальная карта": "#d8e6f0",
+                 "gem": "#1ba29b", "камень": "#1ba29b",
                  "rare": "#ffff77", "редкий": "#ffff77", "magic": "#8888ff", "магический": "#8888ff",
-                 "normal": "#c8c8c8", "обычный": "#c8c8c8"}
+                 "normal": "#c8c8c8", "white": "#c8c8c8", "обычный": "#c8c8c8"}
 
 
 def apply_ttk(root):

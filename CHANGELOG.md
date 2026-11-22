@@ -1,5 +1,39 @@
 # Changelog / Список изменений
 
+## 1.3.0
+
+**RU**
+- **Встроенный предпросмотр наград Начертанного ультиматума (Inscribed Ultimatum)**:
+  - Для гадальных карт отображается аутентичная карточка в стиле Path of Exile: название, арт карты, размер стопки, награда и художественный текст (flavour).
+  - Для уникальных предметов отображается полный тултип предмета: база, требуемый уровень, собственные (implicits) и основные (explicits) свойства, художественный текст и иконка.
+  - В настройки добавлен чекбокс «Карточка награды ультиматума (уники и карты)».
+- **Все изображения полностью вшиты в клиент**:
+  - Все 471 гадальных карт и 1 594 уникальных предметов упакованы прямо в программу — картинки отображаются мгновенно и работают без подключения к интернету.
+- **Точная оценка камней умений (Gems)**:
+  - Прайсчекер теперь определяет точный уровень камня (1–21), качество (+0–23%) и статус осквернения (Corrupted), показывая актуальную цену нужного варианта с poe.ninja.
+- **Умный перезапуск без ошибок**:
+  - Если программа уже была запущена, при открытии нового экземпляра старый процесс завершается автоматически и бесшовно уступает место новому.
+- **Исправление данных и редкостей карт**:
+  - Исправлены ошибки в стопках и наградах карт (Costly Curio, Demigod's Wager, Guardian's Challenge, Friendship и др.). Все уникальные награды теперь подсвечиваются правильным оранжевым цветом.
+- **Окно «Что нового»**:
+  - При первом запуске после обновления игроки сразу видят красивое окно со списком изменений патча (также доступно по клику на версию в подвале программы).
+
+**EN**
+- **Inscribed Ultimatum Reward Preview**:
+  - Divination cards: authentic in-game style card display with header banner, card art, stack size badge, reward text, and flavour quote.
+  - Unique items: complete tooltip with base item, required level, implicits, explicits, flavour text, and item icon.
+  - Settings toggle: "Ultimatum reward preview (uniques & cards)".
+- **All Images Bundled Offline**:
+  - All 471 divination cards and 1,594 unique items are bundled directly into the executable for instant offline display.
+- **Accurate Skill & Support Gem Pricing**:
+  - Detects exact gem level (1–21), quality (+0–23%), and corrupted status, showing specific variant market prices.
+- **Seamless Relaunch**:
+  - Automatically terminates old instances on launch without "already running" errors.
+- **Card Data & Rarity Fixes**:
+  - Synchronized official card stack sizes and reward descriptions; fixed unique reward color highlighting.
+- **What's New Window**:
+  - Automatically displays patch notes on first launch after updating; clickable anytime via the version tag in the footer.
+
 ## 1.2.0
 
 **RU**

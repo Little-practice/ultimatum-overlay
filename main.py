@@ -7,6 +7,7 @@ import copy
 import json
 import os
 import queue
+import sys
 import threading
 import time
 import tkinter as tk
@@ -27,10 +28,11 @@ from prices import Prices
 from prices_window import PricesWindow
 import share
 import system
+from whats_new import show_whats_new
 from screen import DD_BOX, Screen, clipboard_seq, cursor_pos, poe_running
 from watcher import GREEN, ModAdvisor, is_item_text, mod_box, price_info
 
-VERSION = "1.2.0"
+VERSION = "1.3.0"
 CFG_FILE = os.path.join(APP_DIR, "config.json")
 DEFAULT_CFG = {
     "lang": "ru",
@@ -38,6 +40,7 @@ DEFAULT_CFG = {
     "league": "Covens",
     "div_threshold": 1.0,       # дороже — цена золотая
     "label_seconds": 8.0,       # сколько держать карточку цены
+    "show_reward_preview": True,# карточка награды ультиматума (уники и карты)
     "waves": "auto",            # auto | 13 | 10
     "mods_enabled": True,       # подсказывать ли сложность модов
     "life_alert": True,         # метка «% Monster Life» у Inscribed Ultimatum
@@ -165,9 +168,10 @@ class App:
         root.configure(bg=T.BG)
         T.apply_ttk(root)
         self.cfg = load_cfg()
-        ensure_initial_file("names_ru.json")
+        ensure_initial_file("names_ru.json", overwrite_if_newer=True)
         ensure_initial_file("prices_cache.json")
-        ensure_initial_file("leagues.json")
+        ensure_initial_file("leagues.json", overwrite_if_newer=True)
+        ensure_initial_file("items_preview.json", overwrite_if_newer=True)
         i18n.set_lang(self.cfg["lang"])
         self.scr = Screen()
         self.scr.dx, self.scr.dy = self.cfg["offset_x"], self.cfg["offset_y"]
@@ -199,6 +203,10 @@ class App:
         threading.Thread(target=self.check_update, daemon=True).start()
         threading.Thread(target=self.load_leagues, daemon=True).start()
         root.after(50, lambda: T.dark_titlebar(root))
+        if self.cfg.get("last_seen_version") != VERSION:
+            self.cfg["last_seen_version"] = VERSION
+            write_json(CFG_FILE, self.cfg, indent=2)
+            root.after(400, lambda: self.show_whats_new())
         threading.Thread(target=self.load_prices, daemon=True).start()
         threading.Thread(target=self.watch, daemon=True).start()
         self.root.after(100, self.pump)
@@ -251,7 +259,12 @@ class App:
         foot.pack(side="bottom", fill="x")
         tk.Label(foot, text=tr("made_by"), bg=T.CARD, fg=T.MUTED, font=(T.SANS, 11)).pack(side="left", pady=(4, 0))
         tk.Label(foot, text=" Little_practice", bg=T.CARD, fg=T.GOLD_HI, font=(T.SERIF, 17, "bold")).pack(side="left")
-        tk.Label(foot, text=f"   v{VERSION}", bg=T.CARD, fg=T.MUTED, font=(T.SANS, 9)).pack(side="left", pady=(6, 0))
+        ver_b = tk.Label(foot, text=f"   v{VERSION}", bg=T.CARD, fg=T.MUTED, font=(T.SANS, 9), cursor="hand2")
+        ver_b.pack(side="left", pady=(6, 0))
+        ver_b.bind("<Button-1>", lambda e: self.show_whats_new(force=True))
+        wn_b = tk.Label(foot, text=f"({tr('whats_new_link')})", bg=T.CARD, fg=T.GOLD, font=(T.SANS, 9), cursor="hand2")
+        wn_b.pack(side="left", pady=(6, 0), padx=(4, 0))
+        wn_b.bind("<Button-1>", lambda e: self.show_whats_new(force=True))
         T.button(foot, "$  " + tr("support"), lambda: webbrowser.open(DONATE), fg=T.BG, bg=T.GOLD,
                  hover=T.GOLD_HI).pack(side="right", padx=(10, 0))
         for name, color, url in reversed(LINKS):
@@ -287,6 +300,10 @@ class App:
         r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(8, 0))
         T.Toggle(r, self.cfg["life_alert"], lambda v: self.set_flag("life_alert", v)).pack(side="left")
         T.label(r, tr("life_toggle"), size=9).pack(side="left", padx=8)
+        r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(6, 0))
+        T.Toggle(r, self.cfg.get("show_reward_preview", True),
+                 lambda v: self.set_flag("show_reward_preview", v)).pack(side="left")
+        T.label(r, tr("show_reward_preview"), size=9).pack(side="left", padx=8)
 
         # --- карточка: подсказка модов ---
         o, c = T.card(top, tr("mods_title"))
@@ -533,9 +550,12 @@ class App:
 
     # ---------------- обмен галочками ----------------
     def copy_mods(self):
-        self.root.clipboard_clear()
-        self.root.clipboard_append(share.export_code(self.advisor.lib))
-        self.log(tr("copied"))
+        try:
+            self.root.clipboard_clear()
+            self.root.clipboard_append(share.export_code(self.advisor.lib))
+            self.log(tr("copied"))
+        except Exception:
+            pass
 
     def paste_mods(self):
         try:
@@ -564,6 +584,9 @@ class App:
         tk.Frame(w, bg=T.GOLD, height=1).pack(fill="x", padx=20)
         T.wrap_label(w, tr("help"), fg=T.TXT, size=10, bg=T.BG, padx=20, pady=12, anchor="nw").pack(
             fill="both", expand=True)
+
+    def show_whats_new(self, force=False):
+        show_whats_new(self.root, VERSION, lang=self.cfg.get("lang", "ru"), force=force)
 
     # ---------------- трей, автозапуск, обновления ----------------
     def make_tray(self):
@@ -596,6 +619,12 @@ class App:
             if self.hk:
                 self.hk.stop()
         finally:
+            try:
+                pid_file = os.path.join(APP_DIR, "app.pid")
+                if os.path.exists(pid_file):
+                    os.remove(pid_file)
+            except Exception:
+                pass
             self.root.destroy()
 
     def autostart_toggled(self, value):
@@ -795,8 +824,12 @@ class App:
                                   fg=T.ORANGE if self.hidden else T.GREEN)
         if self.pw is not None and self.pw.win.winfo_exists():
             self.pw.refresh_if_needed()
-        # раз в час — свежие цены с poe.ninja (в фоне); цен ещё нет (не было интернета) — пробуем раз в минуту
         now = time.time()
+        # периодическая проверка обновлений на GitHub (раз в 2 часа)
+        if now - getattr(self, "_last_check_update", 0) > 7200:
+            self._last_check_update = now
+            threading.Thread(target=self.check_update, daemon=True).start()
+        # раз в час — свежие цены с poe.ninja (в фоне); цен ещё нет (не было интернета) — пробуем раз в минуту
         stale = self.prices.updated and now - self.prices.updated > 3600
         never = not self.prices.updated and now - self.started > 20
         if (stale and now - getattr(self, "_last_try", 0) > 600) or \
@@ -837,7 +870,8 @@ class App:
                     if is_item_text(txt) and self.kw.user_copied(time.monotonic()):
                         x, y = cursor_pos()
                         info = price_info(txt, self.prices, float(self.cfg["div_threshold"]),
-                                          life_alert=self.cfg["life_alert"])
+                                          life_alert=self.cfg["life_alert"],
+                                          show_preview=self.cfg.get("show_reward_preview", True))
                         self.ui.put(("price", x, y, info))
                         self.log(info["line"], gold=info.get("good", False))
                 # 2) окно ультиматума: кольцо на моде и Double Down (2 раза в секунду)
@@ -885,21 +919,107 @@ class App:
             time.sleep(0.1)
 
 
+def _kill_pid(pid):
+    try:
+        import psutil
+        try:
+            p = psutil.Process(pid)
+            for c in p.children(recursive=True):
+                try:
+                    c.kill()
+                except Exception:
+                    pass
+            p.kill()
+            return True
+        except Exception:
+            pass
+    except ImportError:
+        pass
+
+    try:
+        import subprocess
+        subprocess.run(["taskkill", "/F", "/T", "/PID", str(pid)],
+                       capture_output=True, timeout=2, creationflags=0x08000000)
+        return True
+    except Exception:
+        pass
+
+    try:
+        import ctypes
+        k32 = ctypes.windll.kernel32
+        h = k32.OpenProcess(0x0001, False, pid)
+        if h:
+            k32.TerminateProcess(h, 0)
+            k32.CloseHandle(h)
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def kill_previous_instances():
+    """Завершает предыдущие копии программы, чтобы запустилась новая."""
+    my_pid = os.getpid()
+    my_ppid = os.getppid() if hasattr(os, "getppid") else 0
+    safe_pids = {my_pid, my_ppid}
+
+    # 1. По сохранённому pid-файлу
+    pid_file = os.path.join(APP_DIR, "app.pid")
+    if os.path.exists(pid_file):
+        try:
+            with open(pid_file, "r", encoding="utf-8") as f:
+                old_pid = int(f.read().strip())
+            if old_pid not in safe_pids:
+                _kill_pid(old_pid)
+        except Exception:
+            pass
+
+    # 2. По списку процессов через psutil
+    try:
+        import psutil
+        is_frozen = getattr(sys, "frozen", False)
+        for p in psutil.process_iter(["pid", "ppid", "name", "cmdline"]):
+            try:
+                pid = p.info["pid"]
+                if pid in safe_pids:
+                    continue
+                name = (p.info["name"] or "").lower()
+                if is_frozen:
+                    if "ultimatumoverlay" in name:
+                        _kill_pid(pid)
+                else:
+                    cmdline = p.info.get("cmdline") or []
+                    cmd_str = " ".join(cmdline).lower()
+                    if "main.py" in cmd_str and ("python" in name or "ultimatum" in cmd_str):
+                        _kill_pid(pid)
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                pass
+    except Exception:
+        pass
+
+
 def single_instance():
-    """Вторая копия программы не запускается (иначе два оверлея и два значка в трее)."""
+    """Если уже запущена копия программы, завершаем её и запускаем новую."""
     import ctypes
     k32 = ctypes.windll.kernel32
     single_instance.handle = k32.CreateMutexW(None, False, "Local\\UltimatumOverlaySingleInstance")
     if k32.GetLastError() == 183:  # ERROR_ALREADY_EXISTS
-        i18n.set_lang(load_cfg()["lang"])
-        ctypes.windll.user32.MessageBoxW(None, tr("already_running"), "Ultimatum overlay", 0x40)
-        return False
+        k32.CloseHandle(single_instance.handle)
+        kill_previous_instances()
+        time.sleep(0.3)
+        single_instance.handle = k32.CreateMutexW(None, False, "Local\\UltimatumOverlaySingleInstance")
+
+    try:
+        pid_file = os.path.join(APP_DIR, "app.pid")
+        with open(pid_file, "w", encoding="utf-8") as f:
+            f.write(str(os.getpid()))
+    except Exception:
+        pass
     return True
 
 
 if __name__ == "__main__":
-    if not single_instance():
-        raise SystemExit
+    single_instance()
     root = tk.Tk()
     App(root)
     root.mainloop()

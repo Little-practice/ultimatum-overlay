@@ -9,6 +9,7 @@ S = {
     "prices_info": ("{league}  ·  1 div = {div} c  ·  {n} предметов", "{league}  ·  1 div = {div} c  ·  {n} items"),
     "made_by": ("made by", "made by"),
     "support": ("Поддержать", "Support"),
+    "whats_new_link": ("Что нового", "What's new"),
     # прайсчек
     "pc_title": ("Прайсчек", "Price check"),
     "pc_hint": ("Наведи на предмет в игре и нажми Ctrl+C — рядом с курсором появится цена.",
@@ -120,6 +121,10 @@ S = {
     "overlay_shown": ("показан", "shown"),
     "sound": ("Звук на «Удвоить»", "Sound on Double Down"),
     "life_toggle": ("Метка здоровья монстров у Начертанных", "Monster Life tag on Inscribed"),
+    "show_reward_preview": ("Карточка награды ультиматума (уники и карты)", "Ultimatum reward preview (uniques & cards)"),
+    "req_level": ("Требуется Уровень", "Requires Level"),
+    "sacrifice_label": ("Жертва", "Sacrifice"),
+    "reward_label": ("Награда", "Reward"),
     "league_switched": ("Лига «{old}» закончилась — переключаюсь на «{new}»", "League “{old}” has ended — switching to “{new}”"),
     "monster_life": ("{p}% больше здоровья монстров", "{p}% more Monster Life"),
     "own_short": ("своя цена", "custom price"),

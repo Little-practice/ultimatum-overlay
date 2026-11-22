@@ -1,10 +1,12 @@
 """Что видно на экране и в буфере обмена -> что нарисовать. Ничего не нажимает."""
 import base64
+import re
 
 import cv2
 import numpy as np
 
 import icons
+import preview
 import refs_data
 import i18n
 from i18n import tr
@@ -32,14 +34,20 @@ def is_item_text(txt):
     return bool(txt) and any(k in txt for k in ("Rarity:", "Редкость:", "Item Class:", "Класс предмета:"))
 
 
-def price_info(txt, prices, div_threshold, life_alert=True):
+def price_info(txt, prices, div_threshold, life_alert=True, show_preview=True):
     """Текст предмета из Ctrl+C -> всё для карточки цены у курсора."""
     it = parse_item(txt)
+    client_lang = "ru" if re.search(r"[\u0400-\u04ff]", txt) else "en"
     info = {"name": it["name"] or "Предмет", "rarity": it["rarity"], "qty": it["qty"],
             "detail": "", "chaos": None, "div": None, "good": False, "shaky": False, "mine": False,
             "net": it["reward"] is not None, "life": it["monster_life"] if life_alert else None,
-            "life_lang": it["life_lang"],
-            "error": None}
+            "life_lang": client_lang,
+            "error": None,
+            "preview": None,
+            "sacrifice_text": it.get("sacrifice"),
+            "sacrifice_qty": it.get("sacrifice_qty", 1),
+            "reward_text": it.get("reward"),
+            "reward_qty": it.get("reward_qty", 1)}
     if not prices.chaos:
         info["error"] = tr("still_loading")
     else:
@@ -50,12 +58,26 @@ def price_info(txt, prices, div_threshold, life_alert=True):
             div = chaos / prices.divine if prices.divine else 0.0
             info.update(chaos=chaos, div=div, good=div >= div_threshold, shaky="c?)" in why, mine="c✎)" in why,
                         detail=why.replace("Inscribed Ultimatum: ", "").replace(" x ", " × "))
+            # Если это Начертанный ультиматум и включен показ карточки награды
+            if show_preview and it.get("reward") is not None:
+                rw = it["reward"]
+                low_rw = rw.lower()
+                mult = (2 if any(w in low_rw for w in ("double", "удваива", "удвоени")) else
+                        3 if any(w in low_rw for w in ("triple", "утраива", "утроени")) else None)
+                target_item = it["sacrifice"] if (mult and it.get("sacrifice")) else rw
+                if mult:
+                    info["reward_qty"] = mult * it.get("sacrifice_qty", 1)
+                if target_item:
+                    prev = preview.get_preview(target_item, client_lang, prices.to_en)
+                    if prev:
+                        info["preview"] = prev
     if info["error"]:
         info["line"] = f"{info['name']}: {info['error']}"
     else:
         c = f"{info['chaos']:.1f}" if info["chaos"] < 10 else f"{info['chaos']:,.0f}".replace(",", " ")
         info["chaos_text"] = c
-        info["line"] = (f"{info['name']} — {info['detail']} = {c} c ≈ {info['div']:.2f} div"
+        prev_name = f" [{info['preview']['name']}]" if info.get("preview") else ""
+        info["line"] = (f"{info['name']}{prev_name} — {info['detail']} = {c} c ≈ {info['div']:.2f} div"
                         + (f" ({tr('low_data_short')})" if info["shaky"] else "")
                         + (f" ({tr('own_short')})" if info["mine"] else ""))
     return info

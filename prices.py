@@ -49,6 +49,8 @@ class Prices:
         self.ru = {}         # русское название (lower) -> английское
         self.ru_names = {}   # английское (lower) -> русское, как пишется в игре
         self.low = set()     # названия (lower) с ненадёжной ценой: мало сделок/объявлений
+        self.gems = {}       # "name@level@qual@corrupt" -> цена в хаосах
+        self.low_gems = set()# варианты гемов с ненадёжной ценой
         self.names = {}      # имя (lower) -> как пишется в игре
         self.cat = {}        # имя (lower) -> раздел poe.ninja
         self.custom = {}     # имя (lower) -> своя цена в хаосах
@@ -74,6 +76,8 @@ class Prices:
             return False
         self.league, self.chaos, self.divine, self.updated = league, c["chaos"], c["divine"], c["updated"]
         self.low = set(c.get("low", []))
+        self.gems = c.get("gems", {})
+        self.low_gems = set(c.get("low_gems", []))
         self.names = c.get("names", {})
         self.cat = c.get("cat", {})
         return True
@@ -106,6 +110,8 @@ class Prices:
         linked_chaos = {}
         linked_disp = {}
         linked_cat = {}
+        gems = {}
+        low_gems = set()
 
         for t in EXCHANGE_TYPES:
             try:
@@ -161,6 +167,20 @@ class Prices:
                         linked_cat[n] = t
                     continue
 
+                if t in ("SkillGem", "ImbuedGem"):
+                    lvl = int(ln.get("gemLevel") or 1)
+                    q = int(ln.get("gemQuality") or 0)
+                    qb = 23 if q >= 21 else (20 if q >= 18 else 0)
+                    isc = 1 if bool(ln.get("corrupted")) else 0
+                    gk = f"{n}@{lvl}@{qb}@{isc}"
+                    if gk not in gems or v < gems[gk]:
+                        gems[gk] = v
+                        count = int(ln.get("listingCount") or ln.get("count") or 0)
+                        if count < 5:
+                            low_gems.add(gk)
+                        else:
+                            low_gems.discard(gk)
+
                 if n not in chaos or v < chaos[n]:  # для разных вариантов берём самый дешёвый
                     chaos[n] = v
                     disp[n] = ln.get("name")
@@ -185,10 +205,11 @@ class Prices:
         if not chaos or "Currency" in failed or not (divine or chaos.get("divine orb")) or len(failed) > 20:
             raise RuntimeError(tr("ninja_empty"))
         self.league, self.chaos, self.updated, self.low = league, chaos, time.time(), low
+        self.gems, self.low_gems = gems, low_gems
         self.names, self.cat = disp, cat
         self.divine = divine or chaos.get("divine orb", 0)
         write_json(CACHE, {"league": league, "chaos": chaos, "divine": self.divine, "updated": self.updated,
-                           "low": sorted(low), "names": disp, "cat": cat})
+                           "low": sorted(low), "gems": gems, "low_gems": sorted(low_gems), "names": disp, "cat": cat})
         log(tr("prices_updated", n=len(chaos), div=f"{self.divine:.0f}"))
 
         self.load_ru(log)
@@ -270,7 +291,21 @@ class Prices:
 
     def to_en(self, name):
         n = name.strip()
-        return self.ru.get(n.lower(), n)
+        nl = n.lower()
+        if nl == "кровь мага":
+            return "Mageblood"
+        if nl in self.ru:
+            return self.ru[nl]
+        n_clean = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip().lower()
+        if n_clean in self.ru:
+            return self.ru[n_clean]
+        for pfx in ("карточка ", "гадальная карта ", "карта гадания ", "divination card "):
+            if n_clean.startswith(pfx):
+                stripped = n_clean[len(pfx):].strip()
+                stripped = re.sub(r"^[\"'«]+|[\"'»]+$", "", stripped).strip()
+                if stripped in self.ru:
+                    return self.ru[stripped]
+        return self.ru.get(nl, n)
 
     # ---------- свои цены ----------
     def load_custom(self):
@@ -292,6 +327,15 @@ class Prices:
     def _key(self, name):
         """Имя для поиска: русское переводим в английское, убираем префиксы качества."""
         n = name.strip().replace("\xa0", " ").lower()
+        n = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip()
+        for pfx in ("карточка ", "гадальная карта ", "карта гадания ", "divination card "):
+            if n.startswith(pfx):
+                n = n[len(pfx):].strip()
+                n = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip()
+
+        if n == "кровь мага":
+            return "mageblood"
+
         if n in self.custom or n in self.chaos:
             return n
         if n in self.ru:
@@ -313,6 +357,24 @@ class Prices:
 
         if n in self.ru:
             return self.ru[n].lower()
+
+        # Поддержка камней умений / поддержки в русском клиенте
+        cand_ru = f"поддержка: {n}"
+        if cand_ru in self.ru:
+            en = self.ru[cand_ru].lower()
+            return en
+
+        for aw in ("пробуждённый ", "пробужденный "):
+            if n.startswith(aw):
+                rest = n[len(aw):].strip()
+                for cand2 in (f"пробуждённый - поддержка: {rest}", f"пробужденный - поддержка: {rest}"):
+                    if cand2 in self.ru:
+                        return self.ru[cand2].lower()
+
+        # Английский без 'support': 'empower' -> 'empower support'
+        if f"{n} support" in self.chaos or any(k.startswith(f"{n} support@") for k in self.gems):
+            return f"{n} support"
+
         return n
 
     def display(self, key, lang="en"):
@@ -333,6 +395,58 @@ class Prices:
         if n in self.custom:
             return self.custom[n]
         return self.chaos.get(n)
+
+    def gem_price(self, name, level=1, quality=0, corrupted=False):
+        """Возвращает (цена в хаосах, ненадёжная ли цена) для указанного варианта камня."""
+        key = self._key(name)
+        if key in self.custom:
+            return self.custom[key], False
+
+        isc = 1 if corrupted else 0
+        lvl = int(level or 1)
+        q = int(quality or 0)
+        qb = 23 if q >= 21 else (20 if q >= 18 else 0)
+
+        # 1. Точное совпадение
+        candidates = [f"{key}@{lvl}@{qb}@{isc}"]
+        # 2. Меньшее качество при том же уровне и осквернении
+        if qb == 23:
+            candidates.append(f"{key}@{lvl}@20@{isc}")
+        if qb > 0:
+            candidates.append(f"{key}@{lvl}@0@{isc}")
+        # 3. Другое состояние осквернения при том же уровне
+        candidates.append(f"{key}@{lvl}@{qb}@{1 - isc}")
+        if qb == 23:
+            candidates.append(f"{key}@{lvl}@20@{1 - isc}")
+        if qb > 0:
+            candidates.append(f"{key}@{lvl}@0@{1 - isc}")
+
+        # 4. Ближайший стандартный уровень, если текущий не найден (например, уровень 19 -> уровень 1)
+        alt_lvls = []
+        if lvl not in (1, 20, 21):
+            if lvl >= 20:
+                alt_lvls = [20, 21, 1]
+            else:
+                alt_lvls = [1, 20]
+        for al in alt_lvls:
+            candidates.append(f"{key}@{al}@{qb}@{isc}")
+            if qb > 0:
+                candidates.append(f"{key}@{al}@0@{isc}")
+            candidates.append(f"{key}@{al}@{qb}@{1 - isc}")
+            if qb > 0:
+                candidates.append(f"{key}@{al}@0@{1 - isc}")
+
+        for i, c in enumerate(candidates):
+            if c in self.gems:
+                is_shaky = (i > 0) or (c in self.low_gems)
+                return self.gems[c], is_shaky
+
+        # Резерв: базовая цена из общего списка цен
+        base = self.chaos.get(key)
+        if base is not None:
+            return base, True
+
+        return None, False
 
 
 # ---------------- разбор текста предмета ----------------
@@ -379,6 +493,34 @@ def parse_item(text):
         if m:
             it["monster_life"] = int(m.group(1))
             it["life_lang"] = "ru" if re.search("[а-яА-Я]", l) else "en"   # язык клиента игры
+
+    is_gem = (rarity.lower() in ("gem", "камень") or
+              any(k in cleaned for k in ("Skill Gems", "Support Gems", "Камни умений", "Камни поддержки")))
+    it["is_gem"] = is_gem
+
+    if is_gem and it["name"]:
+        for pfx in ("Superior ", "superior ", "Превосходный ", "превосходный ", "Превосходная ", "превосходная ",
+                    "Превосходное ", "превосходное ", "Качественный ", "качественный ", "Качественная ", "качественная ",
+                    "Качественное ", "качественное "):
+            if it["name"].startswith(pfx):
+                it["name"] = it["name"][len(pfx):].strip()
+                break
+
+    gem_level = 1
+    m_lvl = re.search(r"(?:^|\n)\s*(?:Level|Уровень):\s*(\d+)", cleaned, re.I)
+    if m_lvl:
+        gem_level = int(m_lvl.group(1))
+    it["gem_level"] = gem_level
+
+    gem_quality = 0
+    m_q = re.search(r"(?:^|\n)\s*(?:Quality|Качество):\s*\+?(\d+)%", cleaned, re.I)
+    if m_q:
+        gem_quality = int(m_q.group(1))
+    it["gem_quality"] = gem_quality
+
+    it["corrupted"] = bool(re.search(r"^(?:Corrupted|Осквернено)\s*$", cleaned, re.I | re.M))
+    it["is_ru"] = bool(re.search(r"[а-яА-Я]", cleaned))
+
     return it
 
 
@@ -412,6 +554,19 @@ def value_of(text, prices):
             net = p * rw_qty - ps * n
             return net * it["qty"], (f"{rw_qty} × {rw} ({p:.1f}c{mark(rw)}) − {n} × {sac} ({ps:.1f}c{mark(sac)})")
         return p * rw_qty * it["qty"], f"{rw_qty} × {rw} ({p:.1f}c{mark(rw)})"
+
+    if it.get("is_gem"):
+        lvl = it["gem_level"]
+        q = it["gem_quality"]
+        corrupt = it["corrupted"]
+        p, is_shaky = prices.gem_price(name, level=lvl, quality=q, corrupted=corrupt)
+        if p is None:
+            return None, tr("no_price", name=name)
+        q_mark = "✎" if prices.is_custom(name) else "?" if is_shaky else ""
+        c_tag = (" (осквернено)" if it.get("is_ru") else " (corrupted)") if corrupt else ""
+        desc = f"{lvl}/{q}%{c_tag}"
+        return p * it["qty"], f"{it['qty']} × {name} {desc} ({p:.1f}c{q_mark})"
+
     key = name
     p = prices.price(name)
     is_base = False

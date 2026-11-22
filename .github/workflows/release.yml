@@ -27,15 +27,7 @@ jobs:
           pip install -r requirements.txt pyinstaller==6.19.0
 
       - name: Build exe
-        run: >
-          python -m PyInstaller --noconfirm --onefile --windowed
-          --name UltimatumOverlay --icon app.ico
-          --add-data "icons;icons_default"
-          --add-data "names_ru.json;."
-          --add-data "prices_cache.json;."
-          --add-data "leagues.json;."
-          --hidden-import pystray._win32
-          main.py
+        run: python -m PyInstaller --noconfirm UltimatumOverlay.spec
 
       - name: Checksum
         shell: pwsh

@@ -51,7 +51,7 @@ def install_update(url, sha_url=None, progress=lambda p: None):
     """Скачать новый exe и заменить им текущий: маленький .bat ждёт закрытия программы,
     подменяет файл и запускает новую версию. Вызывающий должен сразу закрыть программу."""
     tmp = os.path.join(tempfile.gettempdir(), APP_NAME + "_new.exe")
-    with requests.get(url, headers={"User-Agent": "ultimatum-overlay"}, stream=True, timeout=60) as r:
+    with requests.get(url, headers={"User-Agent": "ultimatum-overlay"}, stream=True, timeout=120) as r:
         r.raise_for_status()
         total = int(r.headers.get("content-length", 0)) or None
         done = 0

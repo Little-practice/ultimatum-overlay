@@ -2,6 +2,7 @@
 config.json
 my_prices.json
 custom_sound.wav
+cache/
 *.tmp
 
 # сборка
@@ -9,4 +10,4 @@ __pycache__/
 *.pyc
 build/
 dist/
-*.spec
+!UltimatumOverlay.spec
