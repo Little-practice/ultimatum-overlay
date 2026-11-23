@@ -1,5 +1,17 @@
 # Changelog / Список изменений
 
+## 1.3.2
+
+**RU**
+- **Исправление прокрутки колесиком мыши в окне «Что нового»**:
+  - Окно теперь плавно и быстро прокручивается колесиком мыши из любого места окна (над текстом, карточками или фоном).
+  - Автоматический перенос строк по ширине карточек — длинные строки больше не обрезаются по правому краю.
+
+**EN**
+- **Mousewheel Scrolling & Card Layout Fix in 'What's New' Modal**:
+  - The 'What's New' modal now scrolls smoothly and responsively using the mouse wheel anywhere over the cards, text, or background.
+  - Dynamic text wrapping per card width — long lines and paragraphs no longer clip past the right edge.
+
 ## 1.3.1
 
 **RU**

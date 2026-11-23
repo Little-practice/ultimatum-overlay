@@ -7,6 +7,54 @@ import theme as T
 from i18n import tr
 
 NOTES = {
+    "1.3.2": {
+        "title_ru": "Что нового в версии 1.3.2",
+        "title_en": "What's New in version 1.3.2",
+        "ru": [
+            ("🖱️ Исправление прокрутки колесиком мыши",
+             "• Окно «Что нового» теперь плавно и быстро прокручивается колесиком мыши из любого места окна (над текстом, карточками или фоном).\n"
+             "• Автоматический перенос строк по ширине карточек — длинные строки больше не обрезаются по правому краю."),
+
+            ("🎴 Полное исправление прайсчека и предпросмотра на русском клиенте",
+             "• Поддержка всех форм написания карт в Начертанных ультиматумах: множественное число, двоеточия, любые виды кавычек («Доктор», Гадальные карты: Доктор, Гадальные карты “Доктор”, 2x Гадальные карты «...»).\n"
+             "• Ультиматумы с картами в награде или жертве теперь безошибочно рассчитывают чистую прибыль и выводят визуальную карточку предпросмотра."),
+
+            ("⚡ Поддержка изменённых предметов Foulborn («Нечестивый...»)",
+             "• Чекер теперь различает обычные и Foulborn-уники/валюту (Нечестивый Охотник за головами, Нечестивая Волшебная кровь / Кровь мага, Нечестивая сфера возвышения и др.) и показывает точные цены их изменённых версий с poe.ninja.\n"
+             "• Если на рынке нет отдельной цены для Foulborn-версии, автоматически подтягивается цена базового уника."),
+
+            ("🚀 Мгновенная готовность к оценке при старте (28 мс)",
+             "Локальный словарь и кэш цен теперь загружаются синхронно при запуске приложения — прайсчек готов к работе с первой миллисекунды без ожидания сетевых запросов и блокировок."),
+
+            ("📖 Словарь русских названий расширен до 8 442 предметов",
+             "Синхронизированы абсолютно все гадальные карты и уникальные предметы базы предпросмотра."),
+
+            ("🔄 Автоматическое обновление кэша цен при установке патча",
+             "Файл кэша цен в %APPDATA% теперь корректно обновляется у игроков, перешедших со старых версий.")
+        ],
+        "en": [
+            ("🖱️ Mousewheel Scrolling & Card Layout Fix",
+             "• The 'What's New' modal now scrolls smoothly and responsively using the mouse wheel anywhere over the cards, text, or background.\n"
+             "• Dynamic text wrapping per card width — long lines and paragraphs no longer clip past the right edge."),
+
+            ("🎴 Full Fix for Russian Client Price Check & Inscribed Ultimatum Previews",
+             "• Robust handling of plural forms, colons, quotes, and leading counts in Inscribed Ultimatum card rewards/sacrifices (Гадальные карты «...», Гадальная карта: ...).\n"
+             "• Cards in Inscribed Ultimatums now accurately compute profit and display the authentic card artwork preview."),
+
+            ("⚡ Support for Foulborn / Mutated Items",
+             "• Accurate pricing and preview tooltips for Foulborn uniques and currency (Foulborn Headhunter, Foulborn Mageblood, Foulborn Exalted Orb, etc.) on both English and Russian clients (Нечестивый...).\n"
+             "• Graceful fallback to base unique price if a Foulborn variant is not listed separately on poe.ninja."),
+
+            ("🚀 Instant Offline Startup (28 ms)",
+             "Dictionaries and price cache are loaded synchronously into memory on launch, ensuring instant price checking without blocking on network requests."),
+
+            ("📖 Russian Translation Dictionary Expanded to 8,442 Items",
+             "Full bidirectional synchronization for all divination cards and unique items."),
+
+            ("🔄 Automatic Price Cache Refresh on Update",
+             "Automatically overwrites older cached files in %APPDATA% when a newer bundled version is detected.")
+        ]
+    },
     "1.3.1": {
         "title_ru": "Что нового в версии 1.3.1",
         "title_en": "What's New in version 1.3.1",
@@ -135,34 +183,65 @@ def show_whats_new(root, version, lang="ru", force=False):
     content = tk.Frame(cv, bg=T.BG)
     win_id = cv.create_window((0, 0), window=content, anchor="nw")
 
-    def _on_configure(event):
-        cv.configure(scrollregion=cv.bbox("all"))
-        cv.itemconfig(win_id, width=event.width)
+    # Сохраняем все метки карточек для динамического переноса строк (wraplength)
+    card_labels = []
 
-    cv.bind("<Configure>", _on_configure)
+    def _on_canvas_configure(event):
+        cw = event.width
+        cv.itemconfig(win_id, width=cw)
+        wrap_w = max(200, cw - 45)
+        for lbl in card_labels:
+            try:
+                lbl.configure(wraplength=wrap_w)
+            except Exception:
+                pass
+        content.update_idletasks()
+        cv.configure(scrollregion=cv.bbox("all"))
+
+    content.bind("<Configure>", lambda e: cv.configure(scrollregion=cv.bbox("all")))
+    cv.bind("<Configure>", _on_canvas_configure)
     cv.pack(side="left", fill="both", expand=True)
     sb.pack(side="right", fill="y")
 
-    # Колесико мыши
+    # Колесико мыши (Windows delta / Linux Button-4/5)
     def _on_mousewheel(event):
-        cv.yview_scroll(int(-1 * (event.delta / 120)), "units")
-    cv.bind_all("<MouseWheel>", _on_mousewheel)
+        if not cv.winfo_exists():
+            return "break"
+        if getattr(event, "num", None) == 4:
+            cv.yview_scroll(-2, "units")
+        elif getattr(event, "num", None) == 5:
+            cv.yview_scroll(2, "units")
+        elif getattr(event, "delta", None):
+            delta = event.delta
+            step = -int(delta / 120) if abs(delta) >= 120 else (-1 if delta > 0 else 1)
+            cv.yview_scroll(step * 2, "units")
+        return "break"
 
     items = note_data.get("ru" if is_ru else "en", []) if note_data else []
     for h_txt, b_txt in items:
         o, c = T.card(content, None, pad=10)
         o.pack(fill="x", pady=(0, 10))
-        tk.Label(c, text=h_txt, bg=T.CARD, fg=T.GOLD, font=(T.SERIF, 11, "bold"),
-                 anchor="w", justify="left").pack(fill="x", anchor="w")
-        tk.Label(c, text=b_txt, bg=T.CARD, fg=T.TXT, font=(T.SANS, 9),
-                 anchor="w", justify="left").pack(fill="x", anchor="w", pady=(4, 0))
+        h_lbl = tk.Label(c, text=h_txt, bg=T.CARD, fg=T.GOLD, font=(T.SERIF, 11, "bold"),
+                         anchor="w", justify="left")
+        h_lbl.pack(fill="x", anchor="w")
+        b_lbl = tk.Label(c, text=b_txt, bg=T.CARD, fg=T.TXT, font=(T.SANS, 9),
+                         anchor="w", justify="left")
+        b_lbl.pack(fill="x", anchor="w", pady=(4, 0))
+        card_labels.append(h_lbl)
+        card_labels.append(b_lbl)
+
+    # Первичный расчет переноса строк и скролл-области
+    content.update_idletasks()
+    init_cw = cv.winfo_reqwidth() if cv.winfo_width() <= 1 else cv.winfo_width()
+    wrap_w = max(200, init_cw - 45)
+    for lbl in card_labels:
+        lbl.configure(wraplength=wrap_w)
+    content.update_idletasks()
+    cv.configure(scrollregion=cv.bbox("all"))
 
     # Подвал с кнопкой
     def _close():
-        try:
-            cv.unbind_all("<MouseWheel>")
-        except Exception:
-            pass
+        _detach_wheel()
         w.destroy()
 
     w.protocol("WM_DELETE_WINDOW", _close)
@@ -171,5 +250,43 @@ def show_whats_new(root, version, lang="ru", force=False):
     foot.pack(fill="x")
     btn_txt = "Отлично, понятно!" if is_ru else "Got it!"
     T.button(foot, btn_txt, _close, fg=T.BG, bg=T.GOLD, hover=T.GOLD_HI).pack(side="right")
+
+    # Привязываем колесико мыши ко всем элементам окна и глобально
+    def _attach_wheel(event=None):
+        try:
+            w.bind_all("<MouseWheel>", _on_mousewheel)
+            w.bind_all("<Button-4>", _on_mousewheel)
+            w.bind_all("<Button-5>", _on_mousewheel)
+        except Exception:
+            pass
+
+    def _detach_wheel():
+        try:
+            w.unbind_all("<MouseWheel>")
+            w.unbind_all("<Button-4>")
+            w.unbind_all("<Button-5>")
+        except Exception:
+            pass
+
+    def _on_destroy(event):
+        if event.widget == w:
+            _detach_wheel()
+
+    w.bind("<Destroy>", _on_destroy)
+    w.bind("<Enter>", _attach_wheel)
+    _attach_wheel()
+
+    def _bind_mouse_recursive(widget):
+        try:
+            widget.bind("<MouseWheel>", _on_mousewheel, add="+")
+            widget.bind("<Button-4>", _on_mousewheel, add="+")
+            widget.bind("<Button-5>", _on_mousewheel, add="+")
+        except Exception:
+            pass
+        for child in widget.winfo_children():
+            _bind_mouse_recursive(child)
+
+    _bind_mouse_recursive(w)
+    w.focus_set()
 
     return w
