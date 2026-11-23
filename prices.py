@@ -555,17 +555,17 @@ def parse_item(text):
         m = re.match(r"(?:Stack Size|Размер стопки|Количество в стопке):\s*([\d\s,.]+)/", l)
         if m:
             it["qty"] = max(1, _num(m.group(1)))
-        m = re.match(r"(?:Requires Sacrifice|[^:]*[Пп]ожертв[^:]*):\s*(?:([\d\s,]+)\s*[xх×]\s*)?(.+?)(?:\s+[xх×]\s*([\d\s,]+))?$", l)
+        m = re.match(r"(?:Requires\s+Sacrifice|[^:]*жертво[^:]*|[^:]*пожертв[^:]*|[^:]*sacrifice[^:]*):\s*(?:([\d\s,]+)\s*[xх×]\s*)?(.+?)(?:\s+[xх×]\s*([\d\s,]+))?$", l, re.I)
         if m:
             qty_pre, sac_name, qty_post = m.group(1), m.group(2).strip(), m.group(3)
             q = _num(qty_pre) if qty_pre else (_num(qty_post) if qty_post else 1)
-            it["sacrifice"] = sac_name
+            it["sacrifice"] = normalize_item_name(sac_name)
             it["sacrifice_qty"] = max(1, q)
-        m = re.match(r"(?:Reward|Награда):\s*(?:([\d\s,]+)\s*[xх×]\s*)?(.+?)(?:\s+[xх×]\s*([\d\s,]+))?$", l)
+        m = re.match(r"(?:Reward|Награда):\s*(?:([\d\s,]+)\s*[xх×]\s*)?(.+?)(?:\s+[xх×]\s*([\d\s,]+))?$", l, re.I)
         if m:
             qty_pre, rw_name, qty_post = m.group(1), m.group(2).strip(), m.group(3)
             q = _num(qty_pre) if qty_pre else (_num(qty_post) if qty_post else 1)
-            it["reward"] = rw_name
+            it["reward"] = normalize_item_name(rw_name)
             it["reward_qty"] = max(1, q)
         # «200% more Monster Life» (у Inscribed Ultimatum бывает 70 / 120 / 200 %)
         m = re.match(r"(\d+)%\s+more\s+Monster\s+Life", l, re.I) or \
@@ -622,19 +622,22 @@ def value_of(text, prices):
             if p is None:
                 return None, tr("no_price", name=sac)
             extra = (mult - 1) * n
-            return extra * p * it["qty"], f"{extra} × {sac} ({p:.1f}c{mark(sac)})"
+            disp_sac = prices.display(prices._key(sac), lang="ru" if it.get("is_ru") else "en") or sac
+            return extra * p * it["qty"], f"{extra} × {disp_sac} ({p:.1f}c{mark(sac)})"
         p = prices.price(rw)
         if p is None:
             return None, tr("no_reward_price", name=rw)
         rw_qty = it.get("reward_qty", 1)
+        disp_rw = prices.display(prices._key(rw), lang="ru" if it.get("is_ru") else "en") or rw
         if sac:
             # награда — другой предмет взамен пожертвованного: прибыль = награда − жертва
             ps = prices.price(sac)
             if ps is None:
                 return None, tr("no_price", name=sac)
+            disp_sac = prices.display(prices._key(sac), lang="ru" if it.get("is_ru") else "en") or sac
             net = p * rw_qty - ps * n
-            return net * it["qty"], (f"{rw_qty} × {rw} ({p:.1f}c{mark(rw)}) − {n} × {sac} ({ps:.1f}c{mark(sac)})")
-        return p * rw_qty * it["qty"], f"{rw_qty} × {rw} ({p:.1f}c{mark(rw)})"
+            return net * it["qty"], (f"{rw_qty} × {disp_rw} ({p:.1f}c{mark(rw)}) − {n} × {disp_sac} ({ps:.1f}c{mark(sac)})")
+        return p * rw_qty * it["qty"], f"{rw_qty} × {disp_rw} ({p:.1f}c{mark(rw)})"
 
     if it.get("is_gem"):
         lvl = it["gem_level"]

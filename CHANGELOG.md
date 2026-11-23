@@ -1,5 +1,21 @@
 # Changelog / Список изменений
 
+## 1.3.3
+
+**RU**
+- **Полное исправление Начертанных ультиматумов в русском клиенте (валюта и карты)**:
+  - Исправлен разбор строки жертвы: в русском клиенте используется `Требуется жертвоприношение:` (ранее регулярное выражение ошибочно искало только корень с приставкой `пожертв...`).
+  - Ультиматумы на удвоение валюты (`Удваивает принесённую в жертву валюту`, например `Сфера хаоса X10`) теперь правильно рассчитывают чистую прибыль.
+  - Ультиматумы на удвоение карт (`Удваивает принесённые в жертву гадальные карты`, например `Неожиданная награда x1`) рассчитывают прибыль и выводят предпросмотр карточки с артом.
+  - Поддержка заглавной буквы «X» и любых форматов множителей (`X10`, `x1`, `10x`).
+
+**EN**
+- **Full Fix for Inscribed Ultimatums on Russian Client (Currency & Divination Cards)**:
+  - Fixed sacrifice line parsing for Russian client: `Требуется жертвоприношение: ...` is now correctly parsed.
+  - Currency-doubling ultimatums (`Удваивает принесённую в жертву валюту`, e.g., `Chaos Orb X10`) now accurately calculate net profit.
+  - Divination card doubling ultimatums (`Удваивает принесённые в жертву гадальные карты`, e.g., `The Unexpected Prize x1`) calculate net profit and display card artwork preview.
+  - Case-insensitive quantity multiplier matching (`X10`, `x1`, `10x`).
+
 ## 1.3.2
 
 **RU**

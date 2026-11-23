@@ -7,6 +7,54 @@ import theme as T
 from i18n import tr
 
 NOTES = {
+    "1.3.3": {
+        "title_ru": "Что нового в версии 1.3.3",
+        "title_en": "What's New in version 1.3.3",
+        "ru": [
+            ("💰 Полная поддержка ультиматумов на удвоение валюты и карт в русском клиенте",
+             "• Исправлено распознавание строчки «Требуется жертвоприношение: ...» в русской версии игры.\n"
+             "• Теперь корректно рассчитывается прибыль ультиматумов с удвоением валюты («Удваивает принесённую в жертву валюту», например Сферы хаоса X10) и карт («Удваивает принесённые в жертву гадальные карты», например Неожиданная награда x1).\n"
+             "• Поддержка заглавной буквы «X» и любых форматов множителей (X10, x1, 10x).\n"
+             "• Для ультиматумов с удвоением карт сразу выводится карточка предпросмотра с артом."),
+
+            ("🖱️ Исправление прокрутки колесиком мыши",
+             "• Окно «Что нового» теперь плавно и быстро прокручивается колесиком мыши из любого места окна (над текстом, карточками или фоном).\n"
+             "• Автоматический перенос строк по ширине карточек — длинные строки больше не обрезаются по правому краю."),
+
+            ("🎴 Полное исправление прайсчека и предпросмотра на русском клиенте",
+             "• Поддержка всех форм написания карт в Начертанных ультиматумах: множественное число, двоеточия, любые виды кавычек («Доктор», Гадальные карты: Доктор, Гадальные карты “Доктор”, 2x Гадальные карты «...»).\n"
+             "• Ультиматумы с картами в награде или жертве теперь безошибочно рассчитывают чистую прибыль и выводят визуальную карточку предпросмотра."),
+
+            ("⚡ Поддержка изменённых предметов Foulborn («Нечестивый...»)",
+             "• Чекер теперь различает обычные и Foulborn-уники/валюту (Нечестивый Охотник за головами, Нечестивая Волшебная кровь / Кровь мага, Нечестивая сфера возвышения и др.) и показывает точные цены их изменённых версий с poe.ninja.\n"
+             "• Если на рынке нет отдельной цены для Foulborn-версии, автоматически подтягивается цена базового уника."),
+
+            ("🚀 Мгновенная готовность к оценке при старте (28 мс)",
+             "Локальный словарь и кэш цен теперь загружаются синхронно при запуске приложения — прайсчек готов к работе с первой миллисекунды без ожидания сетевых запросов и блокировок.")
+        ],
+        "en": [
+            ("💰 Full Fix for Currency & Card Doubling Inscribed Ultimatums (RU Client)",
+             "• Fixed recognition of 'Требуется жертвоприношение: ...' in the Russian game client.\n"
+             "• Inscribed Ultimatums that double sacrificed currency (e.g., Chaos Orb X10) or divination cards (e.g., The Unexpected Prize x1) now calculate net profit accurately.\n"
+             "• Support for uppercase 'X' and all quantity notations (X10, x1, 10x).\n"
+             "• Divination card preview popup displays authentic card artwork immediately for doubled card ultimatums."),
+
+            ("🖱️ Mousewheel Scrolling & Card Layout Fix",
+             "• The 'What's New' modal now scrolls smoothly and responsively using the mouse wheel anywhere over the cards, text, or background.\n"
+             "• Dynamic text wrapping per card width — long lines and paragraphs no longer clip past the right edge."),
+
+            ("🎴 Full Fix for Russian Client Price Check & Inscribed Ultimatum Previews",
+             "• Robust handling of plural forms, colons, quotes, and leading counts in Inscribed Ultimatum card rewards/sacrifices (Гадальные карты «...», Гадальная карта: ...).\n"
+             "• Cards in Inscribed Ultimatums now accurately compute profit and display the authentic card artwork preview."),
+
+            ("⚡ Support for Foulborn / Mutated Items",
+             "• Accurate pricing and preview tooltips for Foulborn uniques and currency (Foulborn Headhunter, Foulborn Mageblood, Foulborn Exalted Orb, etc.) on both English and Russian clients (Нечестивый...).\n"
+             "• Graceful fallback to base unique price if a Foulborn variant is not listed separately on poe.ninja."),
+
+            ("🚀 Instant Offline Startup (28 ms)",
+             "Dictionaries and price cache are loaded synchronously into memory on launch, ensuring instant price checking without blocking on network requests.")
+        ]
+    },
     "1.3.2": {
         "title_ru": "Что нового в версии 1.3.2",
         "title_en": "What's New in version 1.3.2",
