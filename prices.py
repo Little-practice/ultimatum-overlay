@@ -38,6 +38,34 @@ STASH_TYPES = [
     "BaseType", "Flask", "Beast", "Vial"
 ]
 HEADERS = {"User-Agent": "ultimatum-overlay/1.0"}
+FOULBORN_PREFIX_RE = re.compile(r"^(?:нечестивый|нечестивая|нечестивое|нечестивые|foulborn)\s*[:\-]?\s*", re.I)
+
+
+def normalize_item_name(name):
+    """Очищает имя предмета от кавычек, количества и префиксов (карт, уников, качества)."""
+    if not name:
+        return ""
+    n = name.strip().replace("\xa0", " ").lower()
+    # Убираем количество в начале (например, "2x ", "8× ", "1 х ")
+    n = re.sub(r"^\d+\s*[xх×]\s*", "", n).strip()
+    # Убираем любые виды кавычек и спецсимволы по краям
+    n = re.sub(r"^[\"'«»“”„‘’`\s]+|[\"'«»“”„‘’`\s]+$", "", n).strip()
+
+    changed = True
+    while changed:
+        changed = False
+        patterns = [
+            r"^(?:гадальные\s+карты|гадальная\s+карта|карты\s+гадания|карта\s+гадания|карточка|карточки|divination\s+cards?)\s*[:\-]?\s*",
+            r"^(?:уникальный\s+предмет|уникальные\s+предметы|уникальный|уникальная|уникальное|unique\s+items?)\s*[:\-]?\s*",
+            r"^(?:superior|качественный|качественная|качественное|превосходный|превосходная|превосходное)\s*[:\-]?\s*",
+        ]
+        for pat in patterns:
+            m = re.match(pat, n, re.IGNORECASE)
+            if m:
+                n = n[m.end():].strip()
+                n = re.sub(r"^[\"'«»“”„‘’`\s]+|[\"'«»“”„‘’`\s]+$", "", n).strip()
+                changed = True
+    return n
 
 
 class Prices:
@@ -56,6 +84,39 @@ class Prices:
         self.custom = {}     # имя (lower) -> своя цена в хаосах
         self.lock = threading.Lock()   # одна загрузка цен за раз
         self.load_custom()
+        # Сразу мгновенно загружаем локальный словарь и кэш (0мс задержки, офлайн-готовность с 1-й секунды)
+        self._load_local_ru()
+        self._from_cache(None, None)
+
+    def _load_local_ru(self):
+        """Мгновенно загружает локальный/вшитый словарь без сетевых запросов."""
+        for p in (RU_CACHE, bundled_file("names_ru.json")):
+            if os.path.exists(p):
+                try:
+                    with open(p, encoding="utf-8") as f:
+                        c = json.load(f)
+                    if "ru_names" in c and c.get("map"):
+                        self.ru.update(c["map"])
+                        self.ru_names.update(c["ru_names"])
+                        break
+                except Exception:
+                    pass
+        # Дополняем базой карточек и уников из items_preview.json (гарантирует перевод всех наград)
+        try:
+            for pp in (bundled_file("items_preview.json"), os.path.join(HERE, "items_preview.json")):
+                if os.path.exists(pp):
+                    with open(pp, encoding="utf-8") as f:
+                        pdb = json.load(f)
+                    for cat in ("cards", "uniques"):
+                        for item in pdb.get(cat, {}).values():
+                            r = item.get("name_ru", "").strip()
+                            e = item.get("name_en", "").strip()
+                            if r and e:
+                                self.ru.setdefault(r.lower(), e)
+                                self.ru_names.setdefault(e.lower(), r)
+                    break
+        except Exception:
+            pass
 
     def _from_cache(self, league, max_age):
         paths_to_check = [CACHE, bundled_file("prices_cache.json")]
@@ -65,7 +126,7 @@ class Prices:
                 try:
                     with open(p, encoding="utf-8") as f:
                         data = json.load(f)
-                    if data.get("league") == league:
+                    if league is None or data.get("league") == league:
                         c = data
                         break
                 except Exception:
@@ -74,7 +135,8 @@ class Prices:
             return False
         if max_age is not None and time.time() - c.get("updated", 0) >= max_age:
             return False
-        self.league, self.chaos, self.divine, self.updated = league, c["chaos"], c["divine"], c["updated"]
+        self.league = c.get("league", league or "")
+        self.chaos, self.divine, self.updated = c["chaos"], c["divine"], c["updated"]
         self.low = set(c.get("low", []))
         self.gems = c.get("gems", {})
         self.low_gems = set(c.get("low_gems", []))
@@ -239,28 +301,30 @@ class Prices:
 
     def load_ru(self, log=print, max_age=7 * 86400):
         """Словарь русское название -> английское (официальный API трейда, ru и www)."""
-        cached = None
+        # Сначала гарантируем, что локальный словарь полностью загружен
+        self._load_local_ru()
+        # Проверяем возраст сохранённого кэша
+        need_net = True
         for p in (RU_CACHE, bundled_file("names_ru.json")):
             if os.path.exists(p):
                 try:
                     with open(p, encoding="utf-8") as f:
                         c = json.load(f)
                     if "ru_names" in c and c.get("map"):
-                        cached = c
                         if time.time() - c.get("updated", 0) < max_age:
-                            self.ru, self.ru_names = c["map"], c["ru_names"]
-                            return
-                        break
+                            need_net = False
+                            break
                 except Exception:
                     pass
-        if cached and not self.ru:
-            self.ru, self.ru_names = cached["map"], cached["ru_names"]
+        if not need_net:
+            return
+
         try:
             def get(host, what):
                 time.sleep(0.3)  # пауза, чтобы избежать 429 Too Many Requests от GGG
                 return requests.get(f"https://{host}.pathofexile.com/api/trade/data/{what}",
-                                    headers=HEADERS, timeout=30).json()["result"]
-            m, rn = {}, {}
+                                    headers=HEADERS, timeout=20).json()["result"]
+            m, rn = dict(self.ru), dict(self.ru_names)
             en_s = {e["id"]: e.get("text") for c in get("www", "static") for e in c.get("entries", []) if e.get("text")}
             for c in get("ru", "static"):
                 for e in c.get("entries", []):
@@ -278,33 +342,35 @@ class Prices:
                             m.setdefault(y[k].lower(), x[k])
                             rn.setdefault(x[k].lower(), y[k])
 
-            if len(m) < 100:
-                raise RuntimeError("too few names")
-            self.ru, self.ru_names = m, rn
-            write_json(RU_CACHE, {"updated": time.time(), "map": m, "ru_names": rn})
-            log(tr("ru_loaded", n=len(m)))
+            if len(m) >= 100:
+                self.ru, self.ru_names = m, rn
+                write_json(RU_CACHE, {"updated": time.time(), "map": m, "ru_names": rn})
+                log(tr("ru_loaded", n=len(m)))
         except Exception as e:
-            if cached:                       # нет интернета — старый словарь лучше пустого
-                self.ru, self.ru_names = cached["map"], cached["ru_names"]
-            else:
-                log(tr("ru_err", e=e))
+            # При любой сетевой ошибке остаёмся на надёжном локальном словаре
+            log(tr("ru_err", e=e))
 
     def to_en(self, name):
+        if not name:
+            return ""
         n = name.strip()
         nl = n.lower()
         if nl == "кровь мага":
             return "Mageblood"
         if nl in self.ru:
             return self.ru[nl]
-        n_clean = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip().lower()
-        if n_clean in self.ru:
-            return self.ru[n_clean]
-        for pfx in ("карточка ", "гадальная карта ", "карта гадания ", "divination card "):
-            if n_clean.startswith(pfx):
-                stripped = n_clean[len(pfx):].strip()
-                stripped = re.sub(r"^[\"'«]+|[\"'»]+$", "", stripped).strip()
-                if stripped in self.ru:
-                    return self.ru[stripped]
+        norm = normalize_item_name(n)
+        is_foulborn = bool(FOULBORN_PREFIX_RE.match(norm))
+        base_n = FOULBORN_PREFIX_RE.sub("", norm).strip() if is_foulborn else norm
+        if base_n == "кровь мага":
+            base_n = "волшебная кровь"
+        if base_n in self.ru:
+            en = self.ru[base_n]
+            return f"Foulborn {en}" if is_foulborn else en
+        if norm in self.ru:
+            return self.ru[norm]
+        if norm in self.chaos or norm in self.names:
+            return self.names.get(norm, norm.title())
         return self.ru.get(nl, n)
 
     # ---------- свои цены ----------
@@ -325,57 +391,72 @@ class Prices:
         write_json(CUSTOM_FILE, self.custom, indent=1)
 
     def _key(self, name):
-        """Имя для поиска: русское переводим в английское, убираем префиксы качества."""
-        n = name.strip().replace("\xa0", " ").lower()
-        n = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip()
-        for pfx in ("карточка ", "гадальная карта ", "карта гадания ", "divination card "):
-            if n.startswith(pfx):
-                n = n[len(pfx):].strip()
-                n = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip()
+        """Имя для поиска: русское переводим в английское, убираем префиксы качества, карт, уников и фойлов."""
+        n = normalize_item_name(name)
+        if not n:
+            return ""
 
         if n == "кровь мага":
-            return "mageblood"
+            n = "волшебная кровь"
 
-        if n in self.custom or n in self.chaos:
+        # Проверяем наличие префикса Foulborn / Нечестивый
+        is_foulborn = bool(FOULBORN_PREFIX_RE.match(n))
+        base_n = FOULBORN_PREFIX_RE.sub("", n).strip() if is_foulborn else n
+        if base_n == "кровь мага":
+            base_n = "волшебная кровь"
+
+        # Если точное совпадение со своей ценой
+        if n in self.custom:
             return n
-        if n in self.ru:
-            en = self.ru[n].lower()
-            if en in self.custom or en in self.chaos:
-                return en
+        if is_foulborn and base_n in self.custom:
+            return base_n
 
-        # Пробуем без префикса качества (Superior / Качественный / Превосходный)
-        for pfx in ("superior ", "качественный ", "качественная ", "качественное ",
-                    "превосходный ", "превосходная ", "превосходное "):
-            if n.startswith(pfx):
-                stripped = n[len(pfx):].strip()
-                if stripped in self.custom or stripped in self.chaos:
-                    return stripped
-                if stripped in self.ru:
-                    en = self.ru[stripped].lower()
-                    if en in self.custom or en in self.chaos:
-                        return en
+        # Перевод базового имени
+        base_en = base_n
+        if base_n in self.ru:
+            base_en = self.ru[base_n].lower()
 
-        if n in self.ru:
-            return self.ru[n].lower()
+        if is_foulborn:
+            # Сначала ищем foulborn вариант на poe.ninja
+            cand_fb = f"foulborn {base_en}"
+            if cand_fb in self.custom:
+                return cand_fb
+            if cand_fb in self.chaos:
+                return cand_fb
+            # Если foulborn варианта нет на ninja — возвращаем базовый уник
+            if base_en in self.chaos:
+                return base_en
+
+        # Обычный поиск
+        if base_en in self.custom or base_en in self.chaos:
+            return base_en
+
+        # Если игрок скопировал английское имя с "foulborn "
+        if n.startswith("foulborn "):
+            fb_base = n[9:].strip()
+            if fb_base in self.chaos:
+                return fb_base
+        elif f"foulborn {base_en}" in self.chaos:
+            return f"foulborn {base_en}"
 
         # Поддержка камней умений / поддержки в русском клиенте
-        cand_ru = f"поддержка: {n}"
+        cand_ru = f"поддержка: {base_n}"
         if cand_ru in self.ru:
             en = self.ru[cand_ru].lower()
             return en
 
         for aw in ("пробуждённый ", "пробужденный "):
-            if n.startswith(aw):
-                rest = n[len(aw):].strip()
+            if base_n.startswith(aw):
+                rest = base_n[len(aw):].strip()
                 for cand2 in (f"пробуждённый - поддержка: {rest}", f"пробужденный - поддержка: {rest}"):
                     if cand2 in self.ru:
                         return self.ru[cand2].lower()
 
         # Английский без 'support': 'empower' -> 'empower support'
-        if f"{n} support" in self.chaos or any(k.startswith(f"{n} support@") for k in self.gems):
-            return f"{n} support"
+        if f"{base_en} support" in self.chaos or any(k.startswith(f"{base_en} support@") for k in self.gems):
+            return f"{base_en} support"
 
-        return n
+        return self.ru.get(base_n, base_en)
 
     def display(self, key, lang="en"):
         """Название для показа: по-английски как в игре или по-русски, если есть перевод."""

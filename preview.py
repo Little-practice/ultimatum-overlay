@@ -43,21 +43,8 @@ def DB_FILE_PATH():
 
 
 def _clean_name(name):
-    if not name:
-        return ""
-    n = name.strip().replace("\xa0", " ").lower()
-    # Убираем количество в начале (например, "2x ", "8× "):
-    n = re.sub(r"^\d+\s*[xх×]\s*", "", n).strip()
-    for pfx in ("superior ", "качественный ", "качественная ", "качественное ",
-                "превосходный ", "превосходная ", "превосходное "):
-        if n.startswith(pfx):
-            n = n[len(pfx):].strip()
-    n = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip()
-    for pfx in ("карточка ", "гадальная карта ", "карта гадания ", "divination card "):
-        if n.startswith(pfx):
-            n = n[len(pfx):].strip()
-            n = re.sub(r"^[\"'«]+|[\"'»]+$", "", n).strip()
-    return n
+    from prices import normalize_item_name
+    return normalize_item_name(name)
 
 
 def get_preview(item_name, client_lang="ru", to_en_fn=None):
@@ -98,10 +85,17 @@ def get_preview(item_name, client_lang="ru", to_en_fn=None):
     # 2. Проверяем уники
     u = db.get("uniques", {}).get(en_key) or db.get("uniques", {}).get(raw)
     if not u:
-        for u_data in db.get("uniques", {}).values():
-            if u_data.get("name_ru", "").lower() == raw or u_data.get("name_en", "").lower() == raw:
-                u = u_data
-                break
+        from prices import FOULBORN_PREFIX_RE
+        fb_raw = FOULBORN_PREFIX_RE.sub("", raw).strip()
+        fb_en = FOULBORN_PREFIX_RE.sub("", en_key).strip()
+        u = db.get("uniques", {}).get(fb_en) or db.get("uniques", {}).get(fb_raw)
+        if not u:
+            for u_data in db.get("uniques", {}).values():
+                nr = u_data.get("name_ru", "").lower()
+                ne = u_data.get("name_en", "").lower()
+                if nr in (raw, fb_raw) or ne in (raw, fb_en, en_key):
+                    u = u_data
+                    break
     if u:
         is_ru = client_lang == "ru"
         imps = u.get("implicits_ru" if is_ru else "implicits_en") or u.get("implicits_en", [])

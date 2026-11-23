@@ -32,7 +32,7 @@ from whats_new import show_whats_new
 from screen import DD_BOX, Screen, clipboard_seq, cursor_pos, poe_running
 from watcher import GREEN, ModAdvisor, is_item_text, mod_box, price_info
 
-VERSION = "1.3.0"
+VERSION = "1.3.1"
 CFG_FILE = os.path.join(APP_DIR, "config.json")
 DEFAULT_CFG = {
     "lang": "ru",
@@ -169,7 +169,7 @@ class App:
         T.apply_ttk(root)
         self.cfg = load_cfg()
         ensure_initial_file("names_ru.json", overwrite_if_newer=True)
-        ensure_initial_file("prices_cache.json")
+        ensure_initial_file("prices_cache.json", overwrite_if_newer=True)
         ensure_initial_file("leagues.json", overwrite_if_newer=True)
         ensure_initial_file("items_preview.json", overwrite_if_newer=True)
         i18n.set_lang(self.cfg["lang"])

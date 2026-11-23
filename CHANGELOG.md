@@ -1,5 +1,35 @@
 # Changelog / Список изменений
 
+## 1.3.1
+
+**RU**
+- **Полное исправление прайсчека и предпросмотра на русском клиенте**:
+  - Поддержка всех форм написания карт в Начертанных ультиматумах: множественное число, двоеточия, любые виды кавычек (`«Доктор»`, `Гадальные карты: Доктор`, `Гадальные карты “Доктор”`, `2x Гадальные карты «...»`).
+  - Ультиматумы с картами в награде или жертве теперь безошибочно рассчитывают чистую прибыль и выводят визуальную карточку предпросмотра.
+- **Поддержка изменённых предметов Foulborn («Нечестивый...»)**:
+  - Чекер теперь различает обычные и Foulborn-уники/валюту (`Нечестивый Охотник за головами`, `Нечестивая Волшебная кровь` / `Кровь мага`, `Нечестивая сфера возвышения` и др.) и показывает точные цены их изменённых версий с poe.ninja.
+  - Если на рынке нет отдельной цены для Foulborn-версии, автоматически подтягивается цена базового уника.
+- **Мгновенная готовность к оценке при старте (28 мс)**:
+  - Локальный словарь и кэш цен теперь загружаются синхронно при запуске приложения — прайсчек готов к работе с первой миллисекунды без ожидания сетевых запросов и блокировок.
+- **Словарь русских названий расширен до 8 442 предметов**:
+  - Синхронизированы абсолютно все гадальные карты и уникальные предметы базы предпросмотра.
+- **Автоматическое обновление кэша цен при установке патча**:
+  - Файл кэша цен в `%APPDATA%` теперь корректно обновляется у игроков, перешедших со старых версий.
+
+**EN**
+- **Full Fix for Russian Client Price Check & Inscribed Ultimatum Previews**:
+  - Robust handling of plural forms, colons, quotes, and leading counts in Inscribed Ultimatum card rewards/sacrifices (`Гадальные карты «...»`, `Гадальная карта: ...`).
+  - Cards in Inscribed Ultimatums now accurately compute profit and display the authentic card artwork preview.
+- **Support for Foulborn / Mutated Items**:
+  - Accurate pricing and preview tooltips for Foulborn uniques and currency (`Foulborn Headhunter`, `Foulborn Mageblood`, `Foulborn Exalted Orb`, etc.) on both English and Russian clients (`Нечестивый...`).
+  - Graceful fallback to base unique price if a Foulborn variant is not listed separately on poe.ninja.
+- **Instant Offline Startup (28 ms)**:
+  - Dictionaries and price cache are loaded synchronously into memory on launch, ensuring instant price checking without blocking on network requests.
+- **Russian Translation Dictionary Expanded to 8,442 Items**:
+  - Full bidirectional synchronization for all divination cards and unique items.
+- **Automatic Price Cache Refresh on Update**:
+  - Automatically overwrites older cached files in `%APPDATA%` when a newer bundled version is detected.
+
 ## 1.3.0
 
 **RU**
