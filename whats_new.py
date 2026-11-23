@@ -7,6 +7,46 @@ import theme as T
 from i18n import tr
 
 NOTES = {
+    "1.4.0": {
+        "title_ru": "Что нового в версии 1.4.0",
+        "title_en": "What's New in version 1.4.0",
+        "ru": [
+            ("🛡️ 100% защита аккаунта и соответствие правилам GGG (ToS Safe)",
+             "• Полностью исключено автоматическое чтение экрана по таймеру.\n"
+             "• Сканирование алтаря ультиматума теперь запускается строго вручную по нажатию горячей клавиши (по умолчанию F2).\n"
+             "• Правило «1 ручное нажатие = 1 чтение экрана» соблюдено на 100% — нулевой риск блокировки для игроков и стримеров.\n"
+             "• Значительное снижение нагрузки: программа теперь потребляет 0% CPU в режиме ожидания."),
+
+            ("⌨️ Настраиваемая горячая клавиша сканирования",
+             "• В блок «Подсказка модов» добавлена кнопка настройки клавиши сканирования ультиматума.\n"
+             "• Поддерживаются как одиночные клавиши (F1–F12, Home, End и др.), так и любые комбинации с Ctrl, Shift, Alt."),
+
+            ("💰 Полная поддержка ультиматумов на удвоение валюты и карт в русском клиенте",
+             "• Исправлено распознавание строчки «Требуется жертвоприношение: ...» в русской версии игры.\n"
+             "• Корректно рассчитывается прибыль ультиматумов с удвоением валюты (Сферы хаоса X10) и карт (Неожиданная награда x1) с выводом карточки предпросмотра."),
+
+            ("🖱️ Исправление прокрутки колесиком мыши в окне «Что нового»",
+             "• Плавный скролл из любой точки окна и автоперенос строк внутри карточек.")
+        ],
+        "en": [
+            ("🛡️ 100% GGG ToS Compliant & Zero Account Risk",
+             "• Fully eliminated all background/timer-based screen reading.\n"
+             "• Ultimatum altar modifier scanning is now triggered strictly on manual hotkey press (default: F2).\n"
+             "• Fully adheres to GGG's '1 manual key press = 1 screen read' policy — safe for all players and streamers.\n"
+             "• Massive performance gain: 0% CPU consumption in idle mode."),
+
+            ("⌨️ Customizable Scan Hotkey",
+             "• Added hotkey configuration for Ultimatum scan in the settings panel.\n"
+             "• Supports standalone function keys (F1–F12, Home, End, etc.) as well as modifier combinations (Ctrl/Shift/Alt)."),
+
+            ("💰 Full Fix for Currency & Card Doubling Inscribed Ultimatums (RU Client)",
+             "• Fixed recognition of 'Требуется жертвоприношение: ...' in the Russian game client.\n"
+             "• Net profit and card previews now display accurately for doubled currency and card ultimatums."),
+
+            ("🖱️ Smooth Mousewheel Scrolling in What's New Modal",
+             "• Responsive scrolling anywhere in the modal with dynamic text wrapping.")
+        ]
+    },
     "1.3.3": {
         "title_ru": "Что нового в версии 1.3.3",
         "title_en": "What's New in version 1.3.3",

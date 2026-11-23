@@ -32,7 +32,7 @@ from whats_new import show_whats_new
 from screen import DD_BOX, Screen, clipboard_seq, cursor_pos, poe_running
 from watcher import GREEN, ModAdvisor, is_item_text, mod_box, price_info
 
-VERSION = "1.3.3"
+VERSION = "1.4.0"
 CFG_FILE = os.path.join(APP_DIR, "config.json")
 DEFAULT_CFG = {
     "lang": "ru",
@@ -47,6 +47,7 @@ DEFAULT_CFG = {
     "dd_enabled": True,         # рамка вокруг кнопки «Удвоить» (Double Down)
     "sound": False,             # звук на Double Down и запрещённый мод
     "hide_key": [0x48, MOD_CTRL | MOD_SHIFT],   # Ctrl+Shift+H — скрыть/показать оверлей
+    "scan_key": [0x71, 0],       # F2 — ручной скан алтаря ультиматума (100% ToS Safe)
     "sat_threshold": 60,
     "match_threshold": 0.4,
     "offset_x": 0,
@@ -186,7 +187,8 @@ class App:
         self.container = None
         self.leagues = [self.cfg["league"]]
         self.hidden = False
-        self.hk = None
+        self.hk_hide = None
+        self.hk_scan = None
         self._icon = tk.PhotoImage(data=icon_data.PNG)
         root.iconphoto(True, self._icon)
         self.build()
@@ -313,7 +315,16 @@ class App:
         self.mods_state = T.label(r, "", bold=True)
         self.mods_state.pack(side="left", padx=8)
         self._mods_state_text()
-        r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(10, 2))
+
+        # Кнопка сканирования модов алтаря (ручной вызов — 100% GGG ToS Safe)
+        r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(8, 0))
+        T.label(r, tr("scan_key"), fg=T.MUTED).pack(side="left")
+        self.scan_key_btn = T.button(r, key_name(*self.cfg.get("scan_key", [0x71, 0])),
+                                     lambda: self.capture_key("scan_key"), small=True)
+        self.scan_key_btn.pack(side="left", padx=(8, 6))
+        T.label(r, tr("scan_safe_badge"), size=8, fg=T.GREEN).pack(side="left")
+
+        r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(8, 2))
         T.label(r, tr("mode"), fg=T.MUTED).pack(side="left")
         opts = {tr(k): v for k, v in WAVES}
         rev = {v: k for k, v in opts.items()}
@@ -322,7 +333,7 @@ class App:
                                                                                            padx=(6, 0))
         self.v["waves"] = (wv, opts)
         wv.trace_add("write", self.changed)
-        r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(10, 0))
+        r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(8, 0))
         T.Toggle(r, self.cfg["dd_enabled"], lambda v: self.set_flag("dd_enabled", v)).pack(side="left")
         T.label(r, tr("dd_toggle"), size=9).pack(side="left", padx=8)
         self.status_lbl = T.wrap_label(c, "", fg=T.GOLD_HI, bold=True)
@@ -333,7 +344,7 @@ class App:
         o.grid(row=1, column=0, columnspan=2, sticky="nsew", pady=(12, 0))
         r = tk.Frame(c, bg=T.CARD); r.pack(fill="x")
         T.label(r, tr("hide_key"), fg=T.MUTED).pack(side="left")
-        self.key_btn = T.button(r, key_name(*self.cfg["hide_key"]), self.capture_key, small=True)
+        self.key_btn = T.button(r, key_name(*self.cfg["hide_key"]), lambda: self.capture_key("hide_key"), small=True)
         self.key_btn.pack(side="left", padx=(8, 8))
         self.hidden_lbl = T.label(r, "", size=9, bold=True)
         self.hidden_lbl.pack(side="left")
@@ -616,8 +627,10 @@ class App:
         try:
             if self.tray:
                 self.tray.stop()
-            if self.hk:
-                self.hk.stop()
+            if getattr(self, "hk_hide", None):
+                self.hk_hide.stop()
+            if getattr(self, "hk_scan", None):
+                self.hk_scan.stop()
         finally:
             try:
                 pid_file = os.path.join(APP_DIR, "app.pid")
@@ -674,16 +687,30 @@ class App:
         self.save_cfg()
         threading.Thread(target=self.load_prices, daemon=True).start()
 
-    # ---------------- скрыть/показать оверлей ----------------
-    def start_hotkey(self):
-        if self.hk:
-            self.hk.stop()
-        vk, mods = self.cfg["hide_key"]
-        self.hk = Hotkey(vk, mods, lambda: self.ui.put(("toggle_overlay",)))
-        self.hk.start()
-        self.hk.ready.wait(1)
-        if not self.hk.ok:
+    # ---------------- горячие клавиши ----------------
+    def start_hide_hotkey(self):
+        if getattr(self, "hk_hide", None):
+            self.hk_hide.stop()
+        vk, mods = self.cfg.get("hide_key", [0x48, MOD_CTRL | MOD_SHIFT])
+        self.hk_hide = Hotkey(vk, mods, lambda: self.ui.put(("toggle_overlay",)))
+        self.hk_hide.start()
+        self.hk_hide.ready.wait(1)
+        if not self.hk_hide.ok:
             self.log(tr("key_busy", k=key_name(vk, mods)))
+
+    def start_scan_hotkey(self):
+        if getattr(self, "hk_scan", None):
+            self.hk_scan.stop()
+        vk, mods = self.cfg.get("scan_key", [0x71, 0])
+        self.hk_scan = Hotkey(vk, mods, lambda: self.ui.put(("scan_ultimatum",)))
+        self.hk_scan.start()
+        self.hk_scan.ready.wait(1)
+        if not self.hk_scan.ok:
+            self.log(tr("key_busy", k=key_name(vk, mods)))
+
+    def start_hotkey(self):
+        self.start_hide_hotkey()
+        self.start_scan_hotkey()
 
     def toggle_overlay(self):
         self.hidden = not self.hidden
@@ -693,8 +720,45 @@ class App:
             self.overlay.win.deiconify()
             self.overlay.redraw()
 
-    def capture_key(self):
-        self.key_btn.configure(text=tr("press_key"))
+    def scan_ultimatum(self):
+        """Разовое ручное чтение экрана по нажатию клавиши (строго по правилам GGG: 1 нажатие = 1 чтение)."""
+        if self.hidden:
+            return
+        try:
+            if not self.advisor.panel_open():
+                self.ui.put(("clear", ""))
+                self.status = ""
+                self.log(tr("panel_not_found"))
+                return
+
+            # Double Down
+            dd = self.cfg["dd_enabled"] and self.advisor.double_down()
+            if dd:
+                self.ui.put(("box", "dd", *DD_BOX, tr("dd_chip"), GREEN, True, "rect", 18.0))
+                if self.cfg["sound"]:
+                    beep("info")
+            else:
+                self.ui.put(("clear", "dd"))
+
+            if not self.cfg["mods_enabled"]:
+                self.ui.put(("clear", "mod"))
+                self.status = ""
+            else:
+                mods = self.advisor.read()
+                for img in self.advisor.unknown_icons(mods):
+                    self.ui.put(("learn", img))
+                marks, waves, status = self.advisor.advise(mods)
+                self.ui.put(("clear", "mod"))
+                for i, code, color in marks:
+                    self.ui.put(("box", f"mod{i}", *mod_box(i), tr("chip_" + code), color, False, "ring", 18.0))
+                self.status = status
+                self.log(f"{tr('ultimatum_card')}: {status}")
+        except Exception as ex:
+            self.log(tr("error", e=repr(ex)))
+
+    def capture_key(self, target="hide_key"):
+        btn = self.scan_key_btn if target == "scan_key" else self.key_btn
+        btn.configure(text=tr("press_key"))
         self.root.focus_force()
 
         def on_key(ev):
@@ -704,15 +768,20 @@ class App:
             if ev.keycode != 27:  # Esc — отмена
                 mods = (MOD_CTRL if ev.state & 0x4 else 0) | (MOD_SHIFT if ev.state & 0x1 else 0) | \
                        (1 if ev.state & 0x20000 else 0)
-                bad = not mods or (mods == MOD_CTRL and ev.keycode in (0x41, 0x43, 0x56, 0x58, 0x5A))
+                # Для F1..F24 и спецклавиш разрешаем без модификаторов (mods=0)
+                is_fn = (0x70 <= ev.keycode <= 0x87) or ev.keycode in (0x2D, 0x2E, 0x24, 0x23, 0x21, 0x22, 0x13, 0x91, 0xC0)
+                bad = (not mods and not is_fn) or (mods == MOD_CTRL and ev.keycode in (0x41, 0x43, 0x56, 0x58, 0x5A))
                 if bad:
                     self.log(tr("key_bad"))
                 else:
-                    self.cfg["hide_key"] = [ev.keycode, mods]
+                    self.cfg[target] = [ev.keycode, mods]
                     self.save_cfg()
-                    self.start_hotkey()
-            if self.key_btn.winfo_exists():
-                self.key_btn.configure(text=key_name(*self.cfg["hide_key"]))
+                    if target == "scan_key":
+                        self.start_scan_hotkey()
+                    else:
+                        self.start_hide_hotkey()
+            if btn.winfo_exists():
+                btn.configure(text=key_name(*self.cfg[target]))
             return "break"
 
         self.root.bind("<KeyPress>", on_key)
@@ -800,6 +869,8 @@ class App:
                 self.apply_leagues(a[0])
             elif kind == "toggle_overlay":
                 self.toggle_overlay()
+            elif kind == "scan_ultimatum":
+                self.scan_ultimatum()
             elif kind == "show_window":
                 self.show_window()
             elif kind == "quit":
@@ -851,12 +922,9 @@ class App:
 
     def watch(self):
         seq = clipboard_seq()
-        last_mods_key = None
-        dd_was = False
-        next_mods = 0.0
         while True:
             try:
-                # 1) игрок нажал Ctrl+C на предмете -> карточка цены у курсора
+                # 1) игрок нажал Ctrl+C на предмете -> карточка цены у курсора (ручное действие игрока)
                 s = clipboard_seq()
                 if s != seq:
                     seq = s
@@ -874,49 +942,10 @@ class App:
                                           show_preview=self.cfg.get("show_reward_preview", True))
                         self.ui.put(("price", x, y, info))
                         self.log(info["line"], gold=info.get("good", False))
-                # 2) окно ультиматума: кольцо на моде и Double Down (2 раза в секунду)
-                if time.time() >= next_mods:
-                    next_mods = time.time() + 0.5
-                    if self.redraw_marks:          # сменили язык или галочки — перерисовать подписи
-                        self.redraw_marks = False
-                        last_mods_key = "force"
-                    if not self.advisor.panel_open():
-                        if last_mods_key is not None:      # окно закрылось — убрать все рамки
-                            self.ui.put(("clear", ""))
-                            self.status = ""
-                            last_mods_key = None
-                        dd_was = False
-                    else:
-                        # Double Down подсвечиваем всегда, пока окно открыто
-                        dd = self.cfg["dd_enabled"] and self.advisor.double_down()
-                        if dd:
-                            self.ui.put(("box", "dd", *DD_BOX, tr("dd_chip"), GREEN, True, "rect"))
-                        else:
-                            self.ui.put(("clear", "dd"))
-                        if dd and not dd_was and self.cfg["sound"] and not self.hidden:
-                            beep("info")
-                        dd_was = dd
-                        if not self.cfg["mods_enabled"]:
-                            if last_mods_key != "off":
-                                self.ui.put(("clear", "mod"))
-                            last_mods_key, self.status = "off", ""
-                        else:
-                            mods = self.advisor.read()
-                            for img in self.advisor.unknown_icons(mods):
-                                self.ui.put(("learn", img))
-                            marks, waves, status = self.advisor.advise(mods)
-                            key = tuple(marks)
-                            if key != last_mods_key:
-                                self.ui.put(("clear", "mod"))
-                                for i, code, color in marks:
-                                    self.ui.put(("box", f"mod{i}", *mod_box(i), tr("chip_" + code), color,
-                                                 False, "ring"))
-                                last_mods_key = key
-                            self.status = status
             except Exception as ex:
                 self.log(tr("error", e=repr(ex)))
                 time.sleep(1)
-            time.sleep(0.1)
+            time.sleep(0.05)
 
 
 def _kill_pid(pid):

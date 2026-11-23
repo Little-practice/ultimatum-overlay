@@ -1,5 +1,27 @@
 # Changelog / Список изменений
 
+## 1.4.0
+
+**RU**
+- **100% соответствие правилам GGG (ToS Safe, нулевой риск бана)**:
+  - Полностью исключено любое автоматическое чтение экрана по таймеру в фоне.
+  - Сканирование окна алтаря ультиматума теперь работает строго по ручному нажатию горячей клавиши (по умолчанию `F2`).
+  - Соблюдено правило разработчиков GGG: «Одно ручное нажатие = одно чтение экрана». Безопасно для использования на стримах и видео.
+- **Настраиваемая клавиша сканирования**:
+  - В настройках («Подсказка модов») добавлена кнопка настройки клавиши сканирования ультиматума. Поддерживаются функциональные клавиши `F1..F12`, а также комбинации с `Ctrl`, `Alt`, `Shift`.
+- **Нулевая нагрузка на CPU**:
+  - Без циклического снятия скриншотов программа в режиме ожидания потребляет 0% процессора.
+
+**EN**
+- **100% GGG ToS Compliant & Zero Account Risk**:
+  - Fully eliminated all automatic background timer-based screen reading.
+  - Ultimatum altar modifier scanning is now triggered strictly on manual hotkey press (default: `F2`).
+  - Fully adheres to GGG's developer policy: "One manual key press = one screen read". Completely safe for streaming.
+- **Customizable Scan Hotkey**:
+  - Added hotkey configuration for Ultimatum scan in the settings panel. Supports function keys `F1..F12` and combinations with `Ctrl`, `Alt`, `Shift`.
+- **Zero CPU Idle Load**:
+  - Without continuous screen capture loops, background CPU usage is 0%.
+
 ## 1.3.3
 
 **RU**

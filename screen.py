@@ -59,8 +59,15 @@ class Screen:
         if self.sct is None:
             self.sct = mss.mss()
         a, b = self.to_screen(x1, y1), self.to_screen(x2, y2)
-        img = np.array(self.sct.grab({"left": a[0], "top": a[1],
-                                      "width": max(1, b[0] - a[0]), "height": max(1, b[1] - a[1])}))
+        w, h = max(1, b[0] - a[0]), max(1, b[1] - a[1])
+        try:
+            img = np.array(self.sct.grab({"left": a[0], "top": a[1], "width": w, "height": h}))
+        except Exception:
+            try:
+                self.sct = mss.mss()
+                img = np.array(self.sct.grab({"left": a[0], "top": a[1], "width": w, "height": h}))
+            except Exception:
+                return np.zeros((h, w, 3), dtype=np.uint8)
         return cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
 
     def grab_icon(self, i):

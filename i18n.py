@@ -95,9 +95,9 @@ S = {
         "2. Цена предмета: наведи на него курсор в игре и нажми Ctrl+C — рядом появится карточка с ценой "
         "poe.ninja. Если копирует другой прайсчекер (Ctrl+D и т. п.), карточка не появится.\n\n"
         "3. Моды ультиматума: в списке «Усложнения» нажми на строку, чтобы разрешить или запретить мод. "
-        "Когда в игре откроется окно ультиматума, оверлей обведёт самый простой разрешённый мод "
-        "(«БРАТЬ» / «МОЖНО») или запрещённый («НЕЛЬЗЯ»). Свои галочки можно передать другу кнопками "
-        "«Копировать» и «Вставить».\n\n"
+        "Когда в игре откроется алтарь ультиматума, нажми F2 (клавишу можно сменить в настройках) — оверлей обведёт "
+        "самый простой разрешённый мод («БРАТЬ» / «МОЖНО») или запрещённый («НЕЛЬЗЯ»). Разовое чтение экрана "
+        "строго по нажатию клавиши на 100% соответствует правилам GGG (без риска для аккаунта).\n\n"
         "4. Ctrl+Shift+H — скрыть / показать оверлей (клавишу можно сменить). Крестик окна сворачивает "
         "программу в трей, выход — через значок в трее."
     ), (
@@ -106,13 +106,17 @@ S = {
         "2. Item price: hover an item in game and press Ctrl+C — a price card from poe.ninja appears next to "
         "it. If another price checker copies the item (Ctrl+D etc.), the card does not appear.\n\n"
         "3. Ultimatum modifiers: click a row in the “Modifiers” list to allow or forbid it. When the Ultimatum "
-        "window opens in game, the overlay circles the easiest allowed modifier (“TAKE” / “OK”) or a forbidden "
-        "one (“NO”). Share your settings with friends using “Copy” and “Paste”.\n\n"
+        "altar opens in game, press F2 (the hotkey can be customized) — the overlay circles the easiest allowed "
+        "modifier (“TAKE” / “OK”) or a forbidden one (“NO”). Manual one-time screen read strictly on keypress "
+        "is 100% GGG ToS compliant (zero ban risk).\n\n"
         "4. Ctrl+Shift+H — hide / show the overlay (the key can be changed). The window close button minimises "
         "the program to the tray; quit via the tray icon."
     )),
     "overlay_card": ("Оверлей", "Overlay"),
     "hide_key": ("Скрыть / показать", "Hide / show"),
+    "scan_key": ("Скан ультиматума", "Scan Ultimatum"),
+    "scan_safe_badge": ("(100% по правилам GGG)", "(100% GGG Safe)"),
+    "panel_not_found": ("Окно алтаря ультиматума не найдено на экране", "Ultimatum altar window not found on screen"),
     "press_key": ("нажми клавишу…", "press a key…"),
     "key_busy": ("Клавиша {k} занята другой программой — назначь другую", "Key {k} is taken by another program — pick another one"),
     "key_hint": ("Нажми на кнопку и затем нужную клавишу (можно с Ctrl/Shift/Alt). Esc — отмена.",

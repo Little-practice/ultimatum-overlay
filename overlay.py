@@ -68,8 +68,9 @@ class Overlay:
         self.cards[key] = (sx, sy, info, time.time() + seconds)
         self.redraw()
 
-    def set_box(self, key, x1, y1, x2, y2, text="", color=T.GREEN, blink=False, shape="rect"):
-        val = (x1, y1, x2, y2, text, color, blink, shape)
+    def set_box(self, key, x1, y1, x2, y2, text="", color=T.GREEN, blink=False, shape="rect", seconds=18.0):
+        expires_at = (time.time() + seconds) if seconds else None
+        val = (x1, y1, x2, y2, text, color, blink, shape, expires_at)
         if self.boxes.get(key) != val:
             self.boxes[key] = val
             self.redraw()
@@ -94,10 +95,13 @@ class Overlay:
         expired = [k for k, v in self.cards.items() if v[3] < now]
         for k in expired:
             del self.cards[k]
+        expired_boxes = [k for k, v in self.boxes.items() if len(v) > 8 and v[8] is not None and v[8] < now]
+        for k in expired_boxes:
+            del self.boxes[k]
         if any(b[6] for b in self.boxes.values()):
             self.phase = (self.phase + 1) % 2
             self.redraw()
-        elif expired:
+        elif expired or expired_boxes:
             self.redraw()
         else:
             self._place()  # окно игры могли передвинуть
