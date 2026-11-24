@@ -95,10 +95,10 @@ S = {
         "2. Цена предмета: наведи на него курсор в игре и нажми Ctrl+C — рядом появится карточка с ценой "
         "poe.ninja. Если копирует другой прайсчекер (Ctrl+D и т. п.), карточка не появится.\n\n"
         "3. Моды ультиматума: в списке «Усложнения» нажми на строку, чтобы разрешить или запретить мод. "
-        "В режиме «Авто» оверлей сам находит алтарь и обводит самый простой мод («БРАТЬ» / «МОЖНО») или "
-        "запрещённый («НЕЛЬЗЯ»). В режиме «По кнопке» скан выполняется разово по нажатию клавиши "
-        "(по умолчанию F2 — 100% безопасно по правилам GGG). При закрытии алтаря или старте боя все рамки "
-        "мгновенно исчезают с экрана.\n\n"
+        "Когда в игре откроется алтарь ультиматума, нажми F2 (клавишу можно сменить в настройках) — оверлей разово "
+        "обведёт самый простой разрешённый мод («БРАТЬ» / «МОЖНО») или запрещённый («НЕЛЬЗЯ»). Разовое чтение экрана "
+        "строго по нажатию клавиши на 100% соответствует правилам GGG (без риска для аккаунта). Подсказка "
+        "исчезает сама через 3.5 сек (до спавна монстров), либо сразу при повторном нажатии F2, Esc или Пробела.\n\n"
         "4. Ctrl+Shift+H — скрыть / показать оверлей (клавишу можно сменить). Крестик окна сворачивает "
         "программу в трей, выход — через значок в трее."
     ), (
@@ -106,23 +106,22 @@ S = {
         "visible over the game. The top of the program window shows whether the game was found.\n\n"
         "2. Item price: hover an item in game and press Ctrl+C — a price card from poe.ninja appears next to "
         "it. If another price checker copies the item (Ctrl+D etc.), the card does not appear.\n\n"
-        "3. Ultimatum modifiers: click a row in the “Modifiers” list to allow or forbid it. In 'Auto' mode, "
-        "the overlay automatically detects the altar and circles the easiest allowed modifier (“TAKE” / “OK”) "
-        "or a forbidden one (“NO”). In 'By hotkey' mode, scanning is performed once per hotkey press "
-        "(default: F2 — 100% GGG ToS compliant). When the altar closes or combat begins, all marks "
-        "disappear immediately.\n\n"
+        "3. Ultimatum modifiers: click a row in the “Modifiers” list to allow or forbid it. When the Ultimatum "
+        "altar opens in game, press F2 (the hotkey can be customized) — the overlay circles the easiest allowed "
+        "modifier (“TAKE” / “OK”) or a forbidden one (“NO”). Manual one-time screen read strictly on keypress "
+        "is 100% GGG ToS compliant (zero ban risk). The hint disappears automatically after 3.5 sec (before "
+        "monsters spawn), or instantly on pressing F2 again, Esc, or Space.\n\n"
         "4. Ctrl+Shift+H — hide / show the overlay (the key can be changed). The window close button minimises "
         "the program to the tray; quit via the tray icon."
     )),
     "overlay_card": ("Оверлей", "Overlay"),
     "hide_key": ("Скрыть / показать", "Hide / show"),
-    "scan_mode": ("Режим скана", "Scan mode"),
-    "scan_mode_auto": ("Авто (бесшовный)", "Auto (seamless)"),
-    "scan_mode_manual": ("По кнопке (100% GGG Safe)", "By hotkey (100% GGG Safe)"),
-    "scan_key": ("Клавиша скана", "Scan hotkey"),
-    "scan_badge_auto": ("(авто при открытии алтаря)", "(auto on altar open)"),
-    "scan_badge_manual": ("(разовый скан по кнопке)", "(single scan on key)"),
+    "scan_key": ("Скан ультиматума", "Scan Ultimatum"),
     "scan_safe_badge": ("(100% по правилам GGG)", "(100% GGG Safe)"),
+    "mod_seconds_lbl": ("Время показа", "Display duration"),
+    "dur_2_5": ("2.5 сек", "2.5 sec"),
+    "dur_3_5": ("3.5 сек (реком.)", "3.5 sec (recom.)"),
+    "dur_5": ("5.0 сек", "5.0 sec"),
     "panel_not_found": ("Окно алтаря ультиматума не найдено на экране", "Ultimatum altar window not found on screen"),
     "press_key": ("нажми клавишу…", "press a key…"),
     "key_busy": ("Клавиша {k} занята другой программой — назначь другую", "Key {k} is taken by another program — pick another one"),

@@ -193,9 +193,10 @@ class KeyWatch(threading.Thread):
     OTHER_WINDOW = 0.8  # другая комбинация незадолго до Ctrl+C — значит, копировал чужой прайсчекер
     BLIND = 3.0         # хук не видел вообще никаких нажатий столько секунд — значит, он «слепой»
 
-    def __init__(self):
+    def __init__(self, on_dismiss=None):
         super().__init__(daemon=True)
         self.ok = False
+        self.on_dismiss = on_dismiss
         self.last_c = None       # (время, нажато программой?)
         self.last_other = 0.0    # время последней Ctrl/Alt+клавиша (не C)
         self.last_any = 0.0      # время любого нажатия
@@ -225,6 +226,12 @@ class KeyWatch(threading.Thread):
 
     def on_key(self, vk, injected, now):
         self.last_any = now
+        if vk in (0x1B, 0x20):   # Esc или Пробел в игре — сигнал снять оверлей
+            if self.on_dismiss:
+                try:
+                    self.on_dismiss()
+                except Exception:
+                    pass
         if vk in _MODIFIERS:
             return
         ctrl = user32.GetAsyncKeyState(0x11) & 0x8000

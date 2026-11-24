@@ -68,7 +68,7 @@ class Overlay:
         self.cards[key] = (sx, sy, info, time.time() + seconds)
         self.redraw()
 
-    def set_box(self, key, x1, y1, x2, y2, text="", color=T.GREEN, blink=False, shape="rect", seconds=10.0):
+    def set_box(self, key, x1, y1, x2, y2, text="", color=T.GREEN, blink=False, shape="rect", seconds=3.5):
         expires_at = (time.time() + seconds) if seconds else None
         val = (x1, y1, x2, y2, text, color, blink, shape, expires_at)
         if self.boxes.get(key) != val:

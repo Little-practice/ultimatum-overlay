@@ -43,7 +43,7 @@ DEFAULT_CFG = {
     "show_reward_preview": True,# карточка награды ультиматума (уники и карты)
     "waves": "auto",            # auto | 13 | 10
     "mods_enabled": True,       # подсказывать ли сложность модов
-    "scan_mode": "auto",        # auto (бесшовный) | manual (по кнопке F2, 100% GGG Safe)
+    "mod_seconds": 3.5,         # сколько секунд держать рамки модов (исчезают сами)
     "life_alert": True,         # метка «% Monster Life» у Inscribed Ultimatum
     "dd_enabled": True,         # рамка вокруг кнопки «Удвоить» (Double Down)
     "sound": False,             # звук на Double Down и запрещённый мод
@@ -195,7 +195,7 @@ class App:
         self.build()
         self.overlay = Overlay(root, self.scr)
         self.start_hotkey()
-        self.kw = KeyWatch()      # отличает свой Ctrl+C от Ctrl+C чужого прайсчекера
+        self.kw = KeyWatch(on_dismiss=lambda: self.ui.put(("dismiss_altar",)))  # Esc/Пробел снимают оверлей
         self.kw.start()
         self.tray = None
         self.tray_hint_shown = False
@@ -317,31 +317,24 @@ class App:
         self.mods_state.pack(side="left", padx=8)
         self._mods_state_text()
 
-        # Выбор режима сканирования: Авто (бесшовный) / По кнопке (100% GGG Safe)
+        # Кнопка сканирования модов алтаря (ручной вызов — 100% GGG ToS Safe)
         r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(8, 0))
-        T.label(r, tr("scan_mode"), fg=T.MUTED).pack(side="left")
-        mode_opts = {tr("scan_mode_auto"): "auto", tr("scan_mode_manual"): "manual"}
-        mode_rev = {v: k for k, v in mode_opts.items()}
-        cur_mode = self.cfg.get("scan_mode", "auto")
-        sm_v = tk.StringVar(value=mode_rev.get(cur_mode, list(mode_opts)[0]))
-        self.scan_mode_combo = ttk.Combobox(r, textvariable=sm_v, values=list(mode_opts),
-                                            state="readonly", width=22)
-        self.scan_mode_combo.pack(side="left", padx=(6, 0))
-        self.v["scan_mode"] = (sm_v, mode_opts)
-        sm_v.trace_add("write", self.scan_mode_changed)
-
-        # Кнопка сканирования модов алтаря
-        self.scan_key_row = tk.Frame(c, bg=T.CARD)
-        self.scan_key_row.pack(fill="x", pady=(6, 0))
-        T.label(self.scan_key_row, tr("scan_key"), fg=T.MUTED).pack(side="left")
-        self.scan_key_btn = T.button(self.scan_key_row, key_name(*self.cfg.get("scan_key", [0x71, 0])),
+        T.label(r, tr("scan_key"), fg=T.MUTED).pack(side="left")
+        self.scan_key_btn = T.button(r, key_name(*self.cfg.get("scan_key", [0x71, 0])),
                                      lambda: self.capture_key("scan_key"), small=True)
         self.scan_key_btn.pack(side="left", padx=(8, 6))
-        self.scan_badge = T.label(self.scan_key_row,
-                                  tr("scan_badge_auto") if cur_mode == "auto" else tr("scan_badge_manual"),
-                                  size=8,
-                                  fg=T.GOLD_HI if cur_mode == "auto" else T.GREEN)
-        self.scan_badge.pack(side="left")
+        T.label(r, tr("scan_safe_badge"), size=8, fg=T.GREEN).pack(side="left")
+
+        # Время показа подсказки (исчезает сама до начала боя)
+        r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(8, 0))
+        T.label(r, tr("mod_seconds_lbl"), fg=T.MUTED).pack(side="left")
+        dur_opts = {tr("dur_2_5"): 2.5, tr("dur_3_5"): 3.5, tr("dur_5"): 5.0}
+        dur_rev = {v: k for k, v in dur_opts.items()}
+        cur_dur = float(self.cfg.get("mod_seconds", 3.5))
+        dur_v = tk.StringVar(value=dur_rev.get(cur_dur, list(dur_opts)[1]))
+        ttk.Combobox(r, textvariable=dur_v, values=list(dur_opts), state="readonly", width=18).pack(side="left", padx=(6, 0))
+        self.v["mod_seconds"] = (dur_v, dur_opts)
+        dur_v.trace_add("write", self.changed)
 
         r = tk.Frame(c, bg=T.CARD); r.pack(fill="x", pady=(8, 2))
         T.label(r, tr("mode"), fg=T.MUTED).pack(side="left")
@@ -740,8 +733,13 @@ class App:
             self.overlay.redraw()
 
     def scan_ultimatum(self):
-        """Разовое ручное чтение экрана по нажатию клавиши (строго по правилам GGG: 1 нажатие = 1 чтение)."""
+        """Разовое ручное чтение экрана по нажатию клавиши (строго по правилам GGG: 1 нажатие = 1 чтение).
+        Никакого фонового чтения экрана по таймеру."""
         if self.hidden:
+            return
+        # Повторное нажатие горячей клавиши мгновенно скрывает подсказку (Toggle)
+        if any(k.startswith("mod") or k == "dd" for k in self.overlay.boxes):
+            self.ui.put(("clear", ""))
             return
         try:
             if not self.advisor.panel_open():
@@ -750,10 +748,12 @@ class App:
                 self.log(tr("panel_not_found"))
                 return
 
+            dur = float(self.cfg.get("mod_seconds", 3.5))
+
             # Double Down
             dd = self.cfg["dd_enabled"] and self.advisor.double_down()
             if dd:
-                self.ui.put(("box", "dd", *DD_BOX, tr("dd_chip"), GREEN, True, "rect", 10.0))
+                self.ui.put(("box", "dd", *DD_BOX, tr("dd_chip"), GREEN, True, "rect", dur))
                 if self.cfg["sound"]:
                     beep("info")
             else:
@@ -769,7 +769,7 @@ class App:
                 marks, waves, status = self.advisor.advise(mods)
                 self.ui.put(("clear", "mod"))
                 for i, code, color in marks:
-                    self.ui.put(("box", f"mod{i}", *mod_box(i), tr("chip_" + code), color, False, "ring", 10.0))
+                    self.ui.put(("box", f"mod{i}", *mod_box(i), tr("chip_" + code), color, False, "ring", dur))
                 self.status = status
                 self.log(f"{tr('ultimatum_card')}: {status}")
         except Exception as ex:
@@ -815,16 +815,6 @@ class App:
         self.save_cfg()
         if not value:
             self.ui.put(("clear", "mod"))
-
-    def scan_mode_changed(self, *_):
-        self.changed()
-        mode = self.v["scan_mode"][1].get(self.v["scan_mode"][0].get(), "auto")
-        self.cfg["scan_mode"] = mode
-        if hasattr(self, "scan_badge") and self.scan_badge.winfo_exists():
-            if mode == "auto":
-                self.scan_badge.configure(text=tr("scan_badge_auto"), fg=T.GOLD_HI)
-            else:
-                self.scan_badge.configure(text=tr("scan_badge_manual"), fg=T.GREEN)
 
     # ---------------- настройки ----------------
     def changed(self, *_):
@@ -894,6 +884,9 @@ class App:
                 self.overlay.set_box(*a)
             elif kind == "clear":
                 self.overlay.clear_boxes(a[0])
+            elif kind == "dismiss_altar":
+                if any(k.startswith("mod") or k == "dd" for k in self.overlay.boxes):
+                    self.overlay.clear_boxes("")
             elif kind == "icons":
                 self.render_icons()
             elif kind == "leagues":
@@ -952,13 +945,13 @@ class App:
                 self.log(tr("prices_err", e=ex))
 
     def watch(self):
+        """Фоновый цикл: ТОЛЬКО отслеживание Ctrl+C для прайсчека предметов.
+        Скан экрана по таймеру ПОЛНОСТЬЮ ОТСУТСТВУЕТ (100% GGG ToS Safe).
+        Скан ультиматума вызывается строго по ручному нажатию клавиши игроком."""
         seq = clipboard_seq()
-        last_mods_key = None
-        dd_was = False
-        next_check = 0.0
         while True:
             try:
-                # 1) игрок нажал Ctrl+C на предмете -> карточка цены у курсора (ручное действие игрока)
+                # игрок нажал Ctrl+C на предмете -> карточка цены у курсора (ручное действие игрока)
                 s = clipboard_seq()
                 if s != seq:
                     seq = s
@@ -967,8 +960,7 @@ class App:
                         txt = pyperclip.paste()
                     except Exception:
                         txt = ""
-                    # карточку показываем только на Ctrl+C самого игрока, не на копирование
-                    # другим прайсчекером (Ctrl+D, Alt+D и т. п.)
+                    # карточку показываем только на Ctrl+C самого игрока
                     if is_item_text(txt) and self.kw.user_copied(time.monotonic()):
                         x, y = cursor_pos()
                         info = price_info(txt, self.prices, float(self.cfg["div_threshold"]),
@@ -976,54 +968,6 @@ class App:
                                           show_preview=self.cfg.get("show_reward_preview", True))
                         self.ui.put(("price", x, y, info))
                         self.log(info["line"], gold=info.get("good", False))
-
-                # 2) алтарь ультиматума: авто-скан и мгновенное снятие рамок при закрытии
-                now = time.time()
-                if now >= next_check:
-                    is_auto = (self.cfg.get("scan_mode", "auto") == "auto")
-                    has_boxes = bool(self.overlay.boxes)
-                    # когда на экране висят рамки — опрашиваем быстрее (раз в 0.2 с), чтобы убрать их мгновенно при старте боя
-                    next_check = now + (0.2 if has_boxes else 0.4)
-
-                    if (is_auto or has_boxes) and poe_running():
-                        p_open = self.advisor.panel_open()
-                        if not p_open:
-                            if has_boxes or last_mods_key is not None:
-                                self.ui.put(("clear", ""))
-                                self.status = ""
-                                last_mods_key = None
-                            dd_was = False
-                        elif is_auto:
-                            if self.redraw_marks:
-                                self.redraw_marks = False
-                                last_mods_key = "force"
-
-                            dd = self.cfg["dd_enabled"] and self.advisor.double_down()
-                            if dd:
-                                self.ui.put(("box", "dd", *DD_BOX, tr("dd_chip"), GREEN, True, "rect", 10.0))
-                            else:
-                                self.ui.put(("clear", "dd"))
-                            if dd and not dd_was and self.cfg["sound"] and not self.hidden:
-                                beep("info")
-                            dd_was = dd
-
-                            if not self.cfg["mods_enabled"]:
-                                if last_mods_key != "off":
-                                    self.ui.put(("clear", "mod"))
-                                last_mods_key, self.status = "off", ""
-                            else:
-                                mods = self.advisor.read()
-                                for img in self.advisor.unknown_icons(mods):
-                                    self.ui.put(("learn", img))
-                                marks, waves, status = self.advisor.advise(mods)
-                                key = tuple(marks)
-                                if key != last_mods_key:
-                                    self.ui.put(("clear", "mod"))
-                                    for i, code, color in marks:
-                                        self.ui.put(("box", f"mod{i}", *mod_box(i), tr("chip_" + code), color,
-                                                     False, "ring", 10.0))
-                                    last_mods_key = key
-                                self.status = status
             except Exception as ex:
                 self.log(tr("error", e=repr(ex)))
                 time.sleep(1)

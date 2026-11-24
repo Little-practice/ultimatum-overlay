@@ -11,26 +11,26 @@ NOTES = {
         "title_ru": "Что нового в версии 1.4.1",
         "title_en": "What's New in version 1.4.1",
         "ru": [
-            ("⚡ Мгновенное исчезновение подсказок при старте боя",
-             "• Исправлена проблема, когда зелёный круг «БРАТЬ» оставался висеть на экране во время боя с монстрами.\n"
-             "• Теперь при закрытии алтаря ультиматума или начале новой волны все рамки, круги и подсказки исчезают мгновенно (в течение 0.2 с) и никогда не мешают бою."),
+            ("⚡ Исправление зависания круга «БРАТЬ» (исчезает до начала боя)",
+             "• Устранена проблема, когда зелёный круг «БРАТЬ» оставался висеть на экране во время боя с монстрами.\n"
+             "• Теперь подсказка исчезает автоматически через 3.5 сек (настраивается в меню: 2.5 с / 3.5 с / 5 с) — задолго до спавна монстров.\n"
+             "• Мгновенное снятие: повторное нажатие F2, Esc или Пробел сразу убирает рамки с экрана."),
 
-            ("🔄 Выбор режима сканирования: Авто или По горячей клавише (F2)",
-             "• В блок «Подсказка модов» добавлен удобный переключатель режима сканирования:\n"
-             "  1. «Авто (бесшовный)» — оверлей сам мгновенно подсвечивает лучший мод при открытии алтаря без лишних нажатий (для максимального удобства при фарме десятков карт).\n"
-             "  2. «По кнопке (100% GGG Safe)» — разовое чтение экрана строго по ручному нажатию F2 (полное соответствие букве правил GGG для стримеров).\n"
-             "• Горячая клавиша F2 работает в обоих режимах и позволяет принудительно обновить скан в любой момент.")
+            ("🛡️ 100% честное соответствие правилам GGG (Zero Timer Reading)",
+             "• В коде полностью отсутствует фоновое чтение экрана по таймеру.\n"
+             "• Скан алтаря запускается строго разово по ручному нажатию горячей клавиши (по умолчанию F2).\n"
+             "• 1 нажатие клавиши = 1 снимок экрана. Нулевой риск для игроков и блоггеров.")
         ],
         "en": [
-            ("⚡ Instant Altar Overlay Clearing on Combat Start",
-             "• Fixed the issue where modifier circles (such as 'TAKE') lingered on screen during active combat.\n"
-             "• All overlay boxes, circles, and badges now clear immediately (within 0.2s) the moment the altar window closes or the wave starts."),
+            ("⚡ Fixed Lingering 'TAKE' Circle (Auto-Dismiss Before Combat)",
+             "• Resolved the issue where the green 'TAKE' circle remained on screen during monster combat.\n"
+             "• Marks now automatically disappear after 3.5 sec (configurable: 2.5s / 3.5s / 5s) — well before monsters spawn.\n"
+             "• Instant dismiss: pressing F2 again, Esc, or Space immediately clears overlay marks."),
 
-            ("🔄 Scan Mode Toggle: Seamless Auto vs Hotkey (F2 / 100% GGG Safe)",
-             "• Added a Scan Mode selector in the 'Modifiers' settings card:\n"
-             "  1. 'Auto (seamless)' — automatically highlights the best modifier when the altar opens without pressing keys (ideal for grinding dozens of maps).\n"
-             "  2. 'By hotkey (100% GGG Safe)' — single screen read strictly on manual F2 keypress (strictly adheres to GGG developer policy for streaming).\n"
-             "• The scan hotkey (F2) remains functional in both modes for instant manual rescanning.")
+            ("🛡️ 100% GGG Developer Policy Compliant (Zero Timer Reading)",
+             "• Completely eliminates any background timer-based screen reading.\n"
+             "• Screen capture is performed strictly once per manual keypress (default: F2).\n"
+             "• 1 keypress = 1 screen read. Zero risk for players and content creators.")
         ]
     },
     "1.4.0": {
