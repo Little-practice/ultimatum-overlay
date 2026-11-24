@@ -1,5 +1,27 @@
 # Changelog / Список изменений
 
+## 1.4.1
+
+**RU**
+- **Мгновенное исчезновение подсказок при старте боя / закрытии алтаря**:
+  - Устранена проблема, когда зелёный круг «БРАТЬ» оставался висеть на экране во время боя с монстрами.
+  - Теперь при закрытии алтаря ультиматума или начале новой волны оверлей автоматически и мгновенно (в течение 0.2 с) стирает все рамки, круги и чипы с экрана.
+- **Выбор режима: Автоматический (бесшовный) или По горячей клавише (F2 / 100% GGG Safe)**:
+  - Добавлен удобный переключатель режима сканирования:
+    - `Авто (бесшовный)` — сам мгновенно подсвечивает лучший мод при открытии алтаря без лишних нажатий (идеально для активного гринда ультиматумов).
+    - `По кнопке (100% GGG Safe)` — разовое чтение экрана строго по ручному нажатию горячей клавиши (по умолчанию `F2`, настраивается в меню) в полном соответствии с буквой правил GGG (ToS Safe для стримеров).
+  - Горячая клавиша F2 работает в обоих режимах и позволяет мгновенно обновить скан в любой момент.
+
+**EN**
+- **Instant Altar Overlay Clearing on Combat Start / Altar Close**:
+  - Fixed the issue where modifier circles (such as "TAKE") lingered on screen during monster combat.
+  - As soon as the Ultimatum altar window closes or the wave starts, all boxes, rings, and badges are cleared immediately (within 0.2s).
+- **Scan Mode Selector: Seamless Auto vs Hotkey (F2 / 100% GGG Safe)**:
+  - Added a Scan Mode toggle in the Modifiers card:
+    - `Auto (seamless)`: Automatically highlights the best modifier on altar open without keypresses (ideal for grinding dozens of maps).
+    - `By hotkey (100% GGG Safe)`: Single screen read strictly on manual hotkey press (default: `F2`, customizable) for full GGG developer policy compliance (safe for streaming).
+  - The scan hotkey (F2) remains functional in both modes for instant manual rescanning.
+
 ## 1.4.0
 
 **RU**

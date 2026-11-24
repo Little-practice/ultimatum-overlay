@@ -7,6 +7,32 @@ import theme as T
 from i18n import tr
 
 NOTES = {
+    "1.4.1": {
+        "title_ru": "Что нового в версии 1.4.1",
+        "title_en": "What's New in version 1.4.1",
+        "ru": [
+            ("⚡ Мгновенное исчезновение подсказок при старте боя",
+             "• Исправлена проблема, когда зелёный круг «БРАТЬ» оставался висеть на экране во время боя с монстрами.\n"
+             "• Теперь при закрытии алтаря ультиматума или начале новой волны все рамки, круги и подсказки исчезают мгновенно (в течение 0.2 с) и никогда не мешают бою."),
+
+            ("🔄 Выбор режима сканирования: Авто или По горячей клавише (F2)",
+             "• В блок «Подсказка модов» добавлен удобный переключатель режима сканирования:\n"
+             "  1. «Авто (бесшовный)» — оверлей сам мгновенно подсвечивает лучший мод при открытии алтаря без лишних нажатий (для максимального удобства при фарме десятков карт).\n"
+             "  2. «По кнопке (100% GGG Safe)» — разовое чтение экрана строго по ручному нажатию F2 (полное соответствие букве правил GGG для стримеров).\n"
+             "• Горячая клавиша F2 работает в обоих режимах и позволяет принудительно обновить скан в любой момент.")
+        ],
+        "en": [
+            ("⚡ Instant Altar Overlay Clearing on Combat Start",
+             "• Fixed the issue where modifier circles (such as 'TAKE') lingered on screen during active combat.\n"
+             "• All overlay boxes, circles, and badges now clear immediately (within 0.2s) the moment the altar window closes or the wave starts."),
+
+            ("🔄 Scan Mode Toggle: Seamless Auto vs Hotkey (F2 / 100% GGG Safe)",
+             "• Added a Scan Mode selector in the 'Modifiers' settings card:\n"
+             "  1. 'Auto (seamless)' — automatically highlights the best modifier when the altar opens without pressing keys (ideal for grinding dozens of maps).\n"
+             "  2. 'By hotkey (100% GGG Safe)' — single screen read strictly on manual F2 keypress (strictly adheres to GGG developer policy for streaming).\n"
+             "• The scan hotkey (F2) remains functional in both modes for instant manual rescanning.")
+        ]
+    },
     "1.4.0": {
         "title_ru": "Что нового в версии 1.4.0",
         "title_en": "What's New in version 1.4.0",
