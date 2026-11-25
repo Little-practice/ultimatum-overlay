@@ -7,6 +7,38 @@ import theme as T
 from i18n import tr
 
 NOTES = {
+    "1.4.2": {
+        "title_ru": "Что нового в версии 1.4.2",
+        "title_en": "What's New in version 1.4.2",
+        "ru": [
+            ("🔧 Критический фикс автообновления (ошибка python313.dll)",
+             "• Устранена причина вылета после автообновления («Не найден указанный модуль Temp\\_MEI...\\python313.dll»): новый процесс больше не наследует старую временную папку PyInstaller.\n"
+             "• Исправлен редкий двойной запуск проверки обновлений при старте программы."),
+
+            ("⚔️ Исправлено распознавание алтаря на 1-й волне Ультиматума",
+             "• Теперь нажатие F2 корректно находит алтарь уже на самой первой волне (до начала испытания, когда ещё нет кнопок «Забрать награды» и «ИЛИ»).\n"
+             "• Повторное нажатие F2 всегда заново сканирует алтарь (удобно, если случайно закрыли иконку всплывающей подсказкой или перешли к следующей волне)."),
+
+            ("💰 Улучшения прайсчека, мультимониторов и интерфейса",
+             "• Поддержка осквернённых/шестисвязных префиксов в Начертанных ультиматумах и поиск с «ё»/«е» в списке цен.\n"
+             "• Корректная работа оверлея на втором мониторе слева/сверху от основного и адаптация размера окна под ноутбуки (720p/125% DPI).\n"
+             "• Разрешена привязка клавиш NumPad (Num0–Num9) для сканирования без модификаторов.")
+        ],
+        "en": [
+            ("🔧 Critical Auto-Update Fix (python313.dll Missing Module)",
+             "• Fixed the crash after auto-updating where the restarted exe inherited the old PyInstaller _MEI temp directory.\n"
+             "• Fixed duplicate startup update check threads racing on the downloaded binary."),
+
+            ("⚔️ Fixed Ultimatum Altar Detection on Wave 1 (Before Starting Trial)",
+             "• Pressing F2 now properly detects the Ultimatum altar on Wave 1 before any rewards exist (when 'Take Rewards' and 'OR' are not yet shown).\n"
+             "• Pressing F2 again always triggers a fresh scan cleanly."),
+
+            ("💰 Price Check, Multi-Monitor & UI Improvements",
+             "• Support for Corrupted/Two-Implicit/6-Linked prefixes in Inscribed Ultimatums and Russian ё/е search fallback.\n"
+             "• Fixed overlay geometry on secondary monitors with negative coordinates and adapted main window sizing for 720p/DPI-scaled screens.\n"
+             "• Standalone NumPad keys (Num0–Num9) can now be bound for Ultimatum scanning.")
+        ]
+    },
     "1.4.1": {
         "title_ru": "Что нового в версии 1.4.1",
         "title_en": "What's New in version 1.4.1",

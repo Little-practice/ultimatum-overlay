@@ -55,8 +55,8 @@ def normalize_item_name(name):
     while changed:
         changed = False
         patterns = [
-            r"^(?:гадальные\s+карты|гадальная\s+карта|карты\s+гадания|карта\s+гадания|карточка|карточки|divination\s+cards?)\s*[:\-]?\s*",
-            r"^(?:уникальный\s+предмет|уникальные\s+предметы|уникальный|уникальная|уникальное|unique\s+items?)\s*[:\-]?\s*",
+            r"^(?:(?:дважды\s+оскверн[её]нн\w*|оскверн[её]нн\w*|зеркальн\w*|шестисвязн\w*|6-?связн\w*|double[- ]?corrupted|two[- ]?implicit\s+corrupted|corrupted|mirrored|six[- ]?linked|6[- ]?linked)\s+)?(?:гадальные\s+карты|гадальная\s+карта|карты\s+гадания|карта\s+гадания|карточка|карточки|divination\s+cards?)\s*[:\-]?\s*",
+            r"^(?:(?:дважды\s+оскверн[её]нн\w*|оскверн[её]нн\w*|зеркальн\w*|шестисвязн\w*|6-?связн\w*|double[- ]?corrupted|two[- ]?implicit\s+corrupted|corrupted|mirrored|six[- ]?linked|6[- ]?linked)\s+)?(?:уникальный\s+предмет|уникальные\s+предметы|уникальный|уникальная|уникальное|unique\s+items?)\s*[:\-]?\s*",
             r"^(?:superior|качественный|качественная|качественное|превосходный|превосходная|превосходное)\s*[:\-]?\s*",
         ]
         for pat in patterns:
@@ -336,7 +336,10 @@ class Prices:
             for b in get("ru", "items"):
                 cid = b.get("id")
                 a_entries = www_cats.get(cid, [])
-                for x, y in zip(a_entries, b.get("entries", [])):
+                b_entries = b.get("entries", [])
+                if len(a_entries) != len(b_entries):
+                    continue
+                for x, y in zip(a_entries, b_entries):
                     for k in ("name", "type", "text"):
                         if x.get(k) and y.get(k):
                             m.setdefault(y[k].lower(), x[k])
@@ -344,6 +347,7 @@ class Prices:
 
             if len(m) >= 100:
                 self.ru, self.ru_names = m, rn
+                self._ru_yo = None
                 write_json(RU_CACHE, {"updated": time.time(), "map": m, "ru_names": rn})
                 log(tr("ru_loaded", n=len(m)))
         except Exception as e:
@@ -411,10 +415,18 @@ class Prices:
         if is_foulborn and base_n in self.custom:
             return base_n
 
-        # Перевод базового имени
+        # Перевод базового имени (плюс O(1) кэш для ё/е)
         base_en = base_n
         if base_n in self.ru:
             base_en = self.ru[base_n].lower()
+        else:
+            yo_map = getattr(self, "_ru_yo", None)
+            if yo_map is None or len(yo_map) == 0 and self.ru:
+                yo_map = {k.replace("ё", "е"): v for k, v in self.ru.items() if "ё" in k}
+                self._ru_yo = yo_map
+            alt = base_n.replace("ё", "е")
+            if alt in yo_map:
+                base_en = yo_map[alt].lower()
 
         if is_foulborn:
             # Сначала ищем foulborn вариант на poe.ninja

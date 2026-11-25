@@ -1,5 +1,31 @@
 # Changelog / Список изменений
 
+## 1.4.2
+
+**RU**
+- **Критический фикс автообновления (`python313.dll` не найден)**:
+  - Очищены внутренние переменные среды PyInstaller (`_PYI_*`, `_MEIPASS2`) при запуске скрипта обновления, чтобы перезапущенный `.exe` не пытался загрузиться из уже удалённой временной папки `_MEI` старой версии.
+  - Устранён двойной параллельный запуск `check_update` при старте приложения (гонка при скачивании обновления).
+  - Корректное освобождение мьютекса и хука клавиатуры при выходе.
+- **Исправлено обнаружение алтаря на 1-й волне Ультиматума**:
+  - На 1-й волне (до начала испытания) ещё нет кнопок «Забрать награды» и эмблемы «ИЛИ» — программа теперь уверенно узнаёт окно по кнопке старта/принятия испытания справа.
+  - Повторное нажатие F2 всегда заново сканирует алтарь (включая случаи, когда подсказка перекрывала иконку).
+- **Улучшения прайсчека, оверлея и интерфейса**:
+  - Добавлена поддержка префиксов `Дважды осквернённый уникальный предмет:`, `Осквернённый уникальный предмет:`, `Шестисвязный уникальный предмет:` в Начертанных ультиматумах и резервный поиск по `ё`/`е`.
+  - Исправлено позиционирование оверлея на втором мониторе с отрицательными координатами и масштабирование окна на экранах 720p / 125% DPI.
+  - Потокобезопасная перерисовка предпросмотра картинок после фоновой загрузки, плавный скролл списка модов без конфликтов между окнами и поддержка NumPad-клавиш для бинда.
+
+**EN**
+- **Critical Auto-Update Fix (`python313.dll` Missing Module)**:
+  - Stripped PyInstaller internal environment variables (`_PYI_*`, `_MEIPASS2`, `TCL_LIBRARY`, `TK_LIBRARY`) when launching the updater batch script so the relaunched `.exe` starts cleanly in a fresh `_MEI` directory.
+  - Fixed duplicate `check_update` / `run_update` race condition at startup and cleanly closed mutex/keyboard hook handles on exit.
+- **Fixed Ultimatum Altar Detection on Wave 1**:
+  - On Wave 1 (before starting the trial), 'Take Rewards' and 'OR' are not yet shown — `panel_open()` now detects the altar via the right-hand trial button.
+  - Pressing F2 again reliably rescans the altar cleanly.
+- **Price Check, Overlay & UI Improvements**:
+  - Added support for Corrupted/Two-Implicit/6-Linked prefixes in Inscribed Ultimatums and Russian `ё`/`е` fallback matching.
+  - Fixed negative-coordinate multi-monitor overlay placement, adaptive main window sizing for 720p/DPI screens, thread-safe image preview redraws, conflict-free mod list scrolling, and standalone NumPad hotkey binding.
+
 ## 1.4.1
 
 **RU**

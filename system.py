@@ -51,34 +51,58 @@ def install_update(url, sha_url=None, progress=lambda p: None):
     """Скачать новый exe и заменить им текущий: маленький .bat ждёт закрытия программы,
     подменяет файл и запускает новую версию. Вызывающий должен сразу закрыть программу."""
     tmp = os.path.join(tempfile.gettempdir(), APP_NAME + "_new.exe")
-    with requests.get(url, headers={"User-Agent": "ultimatum-overlay"}, stream=True, timeout=120) as r:
-        r.raise_for_status()
-        total = int(r.headers.get("content-length", 0)) or None
-        done = 0
-        with open(tmp, "wb") as f:
-            for chunk in r.iter_content(1 << 16):
-                f.write(chunk)
-                done += len(chunk)
-                if total:
-                    progress(done / total)
-    if total and done != total:
-        raise RuntimeError("download incomplete")
-    if sha_url:   # сверить контрольную сумму из выпуска
-        import hashlib
-        want = requests.get(sha_url, headers={"User-Agent": "ultimatum-overlay"}, timeout=30).text.split()[0].lower()
-        h = hashlib.sha256()
-        with open(tmp, "rb") as f:
-            for chunk in iter(lambda: f.read(1 << 20), b""):
-                h.update(chunk)
-        if h.hexdigest().lower() != want:
+    try:
+        if os.path.exists(tmp):
             os.remove(tmp)
-            raise RuntimeError("checksum mismatch")
+    except OSError:
+        pass
+    try:
+        with requests.get(url, headers={"User-Agent": "ultimatum-overlay"}, stream=True, timeout=120) as r:
+            r.raise_for_status()
+            total = int(r.headers.get("content-length", 0)) or None
+            done = 0
+            with open(tmp, "wb") as f:
+                for chunk in r.iter_content(1 << 16):
+                    f.write(chunk)
+                    done += len(chunk)
+                    if total:
+                        progress(done / total)
+        if total and done != total:
+            raise RuntimeError("download incomplete")
+        if sha_url:   # сверить контрольную сумму из выпуска
+            import hashlib
+            want = requests.get(sha_url, headers={"User-Agent": "ultimatum-overlay"}, timeout=30).text.split()[0].lower()
+            h = hashlib.sha256()
+            with open(tmp, "rb") as f:
+                for chunk in iter(lambda: f.read(1 << 20), b""):
+                    h.update(chunk)
+            if h.hexdigest().lower() != want:
+                raise RuntimeError("checksum mismatch")
+    except Exception:
+        try:
+            if os.path.exists(tmp):
+                os.remove(tmp)
+        except OSError:
+            pass
+        raise
+
     bat = os.path.join(tempfile.gettempdir(), APP_NAME + "_update.bat")
     import ctypes
     oem = f"cp{ctypes.windll.kernel32.GetOEMCP()}"
+    # Важно: очищаем все внутренние переменные PyInstaller (_PYI_*, _MEI*, TCL_LIBRARY, TK_LIBRARY),
+    # иначе новый onefile-exe унаследует путь к удалённой папке _MEIxxxxxx старого процесса и упадёт!
+    clean_env = {k: v for k, v in os.environ.items()
+                 if not k.startswith(("_PYI_", "_MEI")) and k not in ("TCL_LIBRARY", "TK_LIBRARY")}
     # ждём, пока exe освободится (у onefile-сборки два процесса), подменяем — до 60 попыток
     with open(bat, "w", encoding=oem, errors="replace") as f:
         f.write(f'''@echo off
+set "_MEIPASS2="
+set "_PYI_ARCHIVE_FILE="
+set "_PYI_PARENT_PROCESS_LEVEL="
+set "_PYI_APPLICATION_HOME_DIR="
+set "_PYI_SPLASH_IPC="
+set "TCL_LIBRARY="
+set "TK_LIBRARY="
 set n=0
 :retry
 timeout /t 1 /nobreak >nul
@@ -89,11 +113,12 @@ if errorlevel 1 (
   start "" "{EXE}"
   goto end
 )
+timeout /t 1 /nobreak >nul
 start "" "{EXE}"
 :end
 del "%~f0"
 ''')
-    subprocess.Popen(["cmd", "/c", bat], creationflags=0x08000000)  # CREATE_NO_WINDOW
+    subprocess.Popen(["cmd", "/c", bat], env=clean_env, creationflags=0x08000000)  # CREATE_NO_WINDOW
 
 
 # ---------------- автозапуск ----------------

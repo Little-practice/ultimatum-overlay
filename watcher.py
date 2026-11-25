@@ -102,8 +102,17 @@ class ModAdvisor:
         return out
 
     def panel_open(self):
-        """Окно открыто, если узнаются хотя бы 2 из 3 кусочков (один может закрыть подсказка)."""
-        return sum(v >= 0.6 for v in self.panel_scores().values()) >= 2
+        """Окно открыто: либо узнаются хотя бы 2 из 3 элементов (волны 2+),
+        либо кнопка старта/принятия испытания справа (на 1-й волне ещё нет «Забрать» и «ИЛИ»)."""
+        sc = self.panel_scores()
+        return sum(v >= 0.58 for v in sc.values()) >= 2 or sc.get("accept", 0.0) >= 0.60
+
+    def scan_panel_state(self):
+        """-> (is_open, has_rewards_stage). На 1-й волне нет OR/Take и не бывает Double Down."""
+        sc = self.panel_scores()
+        is_open = sum(v >= 0.58 for v in sc.values()) >= 2 or sc.get("accept", 0.0) >= 0.60
+        has_rewards = sc.get("or", 0.0) >= 0.45 or sc.get("take", 0.0) >= 0.45
+        return is_open, has_rewards
 
     def read(self):
         """-> None, если окна ультиматума нет; иначе список из 3 dict по иконкам."""
@@ -163,7 +172,7 @@ class ModAdvisor:
             else:
                 cnt = 1
             self._pending[i] = (m["img"], cnt)
-            if cnt == 3:
+            if cnt == 2:
                 out.append(m["img"])
         return out
 

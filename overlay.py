@@ -35,6 +35,7 @@ class Overlay:
         self.phase = 0
         self.rect = (0, 0, 1, 1)
         self._img_refs = []
+        self._need_redraw = False
         self.win.update_idletasks()
         self._click_through()
         self._tick()
@@ -53,7 +54,7 @@ class Overlay:
         L, T_, W, H = r
         if (self.win.winfo_rootx(), self.win.winfo_rooty(), self.win.winfo_width(),
                 self.win.winfo_height()) != (L, T_, W, H):
-            self.win.geometry(f"{W}x{H}+{L}+{T_}")
+            self.win.geometry(f"{W}x{H}{L:+d}{T_:+d}")
 
     def _xy(self, x, y):
         L, T_, W, H = self.rect
@@ -82,13 +83,16 @@ class Overlay:
         if keys:
             self.redraw()
 
+    def schedule_redraw(self):
+        self._need_redraw = True
+
     def _tick(self):
         try:
             self._tick_body()
         except Exception:
             pass
         finally:
-            self.win.after(380, self._tick)
+            self.win.after(250, self._tick)
 
     def _tick_body(self):
         now = time.time()
@@ -98,10 +102,12 @@ class Overlay:
         expired_boxes = [k for k, v in self.boxes.items() if len(v) > 8 and v[8] is not None and v[8] < now]
         for k in expired_boxes:
             del self.boxes[k]
+        need = self._need_redraw
+        self._need_redraw = False
         if any(b[6] for b in self.boxes.values()):
             self.phase = (self.phase + 1) % 2
             self.redraw()
-        elif expired or expired_boxes:
+        elif need or expired or expired_boxes:
             self.redraw()
         else:
             self._place()  # окно игры могли передвинуть
@@ -168,7 +174,7 @@ class Overlay:
         y += h_h + 8 * k
 
         art_w, art_h = int(240 * k), int(144 * k)
-        photo = preview.get_image(prev.get("art_url"), art_w, art_h, on_ready=lambda: self.win.after(0, self.redraw),
+        photo = preview.get_image(prev.get("art_url"), art_w, art_h, on_ready=self.schedule_redraw,
                                   image_file=prev.get("image_file"), item_type="cards")
         if photo:
             self._img_refs.append(photo)
@@ -291,7 +297,7 @@ class Overlay:
         icon_url = prev.get("icon_url")
         if icon_url:
             max_iw, max_ih = int(120 * k), int(130 * k)
-            photo = preview.get_image(icon_url, max_iw, max_ih, on_ready=lambda: self.win.after(0, self.redraw),
+            photo = preview.get_image(icon_url, max_iw, max_ih, on_ready=self.schedule_redraw,
                                       image_file=prev.get("image_file"), item_type="uniques")
             if photo:
                 self._img_refs.append(photo)
@@ -310,7 +316,7 @@ class Overlay:
     def _card(self, s, sx, sy, info):
         """Карточка цены у курсора."""
         L, T_, W, H = self.rect
-        k = max(1.0, s)
+        k = max(0.75, s)
         pad = 12 * k
         name_col = T.RARITY_COLORS.get(info.get("rarity", "").lower(), T.TXT)
         good = info.get("good")

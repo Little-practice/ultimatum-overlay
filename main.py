@@ -32,7 +32,7 @@ from whats_new import show_whats_new
 from screen import DD_BOX, Screen, clipboard_seq, cursor_pos, poe_running
 from watcher import GREEN, ModAdvisor, is_item_text, mod_box, price_info
 
-VERSION = "1.4.1"
+VERSION = "1.4.2"
 CFG_FILE = os.path.join(APP_DIR, "config.json")
 DEFAULT_CFG = {
     "lang": "ru",
@@ -138,6 +138,7 @@ class ModRow:
         self.name.pack(side="left", fill="x", expand=True, padx=(2, 4))
         for w in (f, self.icon, self.state, self.name):
             w.bind("<Button-1>", lambda ev: self.toggle())
+            w.bindtags(("UltModsScroll",) + w.bindtags())
         self.paint(1.0)
 
     def colors(self, on):
@@ -165,8 +166,9 @@ class App:
     def __init__(self, root):
         self.root = root
         root.title("Ultimatum overlay")
-        root.geometry("1100x1000")
-        root.minsize(660, 600)
+        sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+        root.geometry(f"{min(1100, max(660, sw - 40))}x{min(940, max(540, sh - 80))}")
+        root.minsize(min(660, max(500, sw - 40)), min(540, max(420, sh - 80)))
         root.configure(bg=T.BG)
         T.apply_ttk(root)
         self.cfg = load_cfg()
@@ -181,6 +183,9 @@ class App:
         self.advisor = ModAdvisor(self.scr, self.cfg)
         self.ui = queue.Queue()   # задания для окна из рабочего потока
         self.started = time.time()
+        self._last_check_update = self.started
+        self._updating = False
+        self._ui_cache = {}
         self.status = ""
         self.pw = None            # окно «Цены»
         self.redraw_marks = False
@@ -195,7 +200,7 @@ class App:
         self.build()
         self.overlay = Overlay(root, self.scr)
         self.start_hotkey()
-        self.kw = KeyWatch(on_dismiss=lambda: self.ui.put(("dismiss_altar",)))  # Esc/Пробел снимают оверлей
+        self.kw = KeyWatch(on_dismiss=lambda: self.overlay.boxes and self.ui.put(("dismiss_altar",)))  # Esc/Пробел снимают оверлей
         self.kw.start()
         self.tray = None
         self.tray_hint_shown = False
@@ -230,6 +235,7 @@ class App:
             self.container.destroy()
         self.v = {}
         self.rows = {}
+        self._ui_cache = {}
         root = self.container = tk.Frame(self.root, bg=T.BG)
         root.pack(fill="both", expand=True)
 
@@ -417,10 +423,12 @@ class App:
         self.canvas.configure(yscrollcommand=sb.set)
         self.canvas.pack(side="left", fill="both", expand=True)
         sb.pack(side="right", fill="y")
-        # колесо мыши крутит список, только когда курсор над ним
-        wheel = lambda e: self.canvas.yview_scroll(-e.delta // 120, "units")
-        self.canvas.bind("<Enter>", lambda e: self.root.bind_all("<MouseWheel>", wheel))
-        self.canvas.bind("<Leave>", lambda e: self.root.unbind_all("<MouseWheel>"))
+        # колесо мыши крутит список независимо от вложенных виджетов и не мешает другим окнам
+        self.root.bind_class("UltModsScroll", "<MouseWheel>",
+                             lambda e: self.canvas.yview_scroll(-e.delta // 120, "units")
+                             if self.canvas.winfo_exists() else None)
+        for w in (self.canvas, self.inner):
+            w.bindtags(("UltModsScroll",) + w.bindtags())
         self.render_icons()
 
     def _canvas_resized(self, e):
@@ -643,7 +651,17 @@ class App:
                 self.hk_hide.stop()
             if getattr(self, "hk_scan", None):
                 self.hk_scan.stop()
+            if getattr(self, "kw", None):
+                self.kw.stop()
         finally:
+            try:
+                h = getattr(single_instance, "handle", None)
+                if h:
+                    import ctypes
+                    ctypes.windll.kernel32.CloseHandle(h)
+                    single_instance.handle = None
+            except Exception:
+                pass
             try:
                 pid_file = os.path.join(APP_DIR, "app.pid")
                 if os.path.exists(pid_file):
@@ -665,6 +683,9 @@ class App:
             self.ui.put(("update", *found))
 
     def run_update(self, ver, url, sha=None):
+        if getattr(self, "_updating", False):
+            return
+        self._updating = True
         self.log(tr("updating", v=ver))
 
         def work():
@@ -672,6 +693,7 @@ class App:
                 system.install_update(url, sha)
                 self.ui.put(("quit",))
             except Exception as ex:
+                self._updating = False
                 self.log(tr("update_err", e=ex))
         threading.Thread(target=work, daemon=True).start()
 
@@ -737,12 +759,9 @@ class App:
         Никакого фонового чтения экрана по таймеру."""
         if self.hidden:
             return
-        # Повторное нажатие горячей клавиши мгновенно скрывает подсказку (Toggle)
-        if any(k.startswith("mod") or k == "dd" for k in self.overlay.boxes):
-            self.ui.put(("clear", ""))
-            return
         try:
-            if not self.advisor.panel_open():
+            is_open, has_rewards = self.advisor.scan_panel_state()
+            if not is_open:
                 self.ui.put(("clear", ""))
                 self.status = ""
                 self.log(tr("panel_not_found"))
@@ -750,8 +769,8 @@ class App:
 
             dur = float(self.cfg.get("mod_seconds", 3.5))
 
-            # Double Down
-            dd = self.cfg["dd_enabled"] and self.advisor.double_down()
+            # Double Down бывает только на 2+ волне (когда уже есть награды / блок OR/Take)
+            dd = self.cfg["dd_enabled"] and has_rewards and self.advisor.double_down()
             if dd:
                 self.ui.put(("box", "dd", *DD_BOX, tr("dd_chip"), GREEN, True, "rect", dur))
                 if self.cfg["sound"]:
@@ -778,32 +797,48 @@ class App:
     def capture_key(self, target="hide_key"):
         btn = self.scan_key_btn if target == "scan_key" else self.key_btn
         btn.configure(text=tr("press_key"))
+        # Временно снимаем перехватываемый хоткей, чтобы старая клавиша (напр. F2) дошла до окна
+        hk = self.hk_scan if target == "scan_key" else self.hk_hide
+        if hk:
+            hk.stop()
         self.root.focus_force()
+
+        def finish(save=False, keycode=0, mods=0):
+            self.root.unbind("<KeyPress>")
+            self.root.unbind("<FocusOut>")
+            if save:
+                is_fn = (0x70 <= keycode <= 0x87) or (0x60 <= keycode <= 0x6F) or keycode in (
+                    0x2D, 0x2E, 0x24, 0x23, 0x21, 0x22, 0x13, 0x91, 0xC0)
+                bad = (not mods and not is_fn) or (mods == MOD_CTRL and keycode in (0x41, 0x43, 0x56, 0x58, 0x5A))
+                if bad:
+                    self.log(tr("key_bad"))
+                else:
+                    self.cfg[target] = [keycode, mods]
+                    self.save_cfg()
+            if target == "scan_key":
+                self.start_scan_hotkey()
+            else:
+                self.start_hide_hotkey()
+            if btn.winfo_exists():
+                btn.configure(text=key_name(*self.cfg[target]))
 
         def on_key(ev):
             if ev.keycode in (16, 17, 18, 91, 92):  # одиночные Shift/Ctrl/Alt/Win — ждём основную клавишу
                 return "break"
-            self.root.unbind("<KeyPress>")
-            if ev.keycode != 27:  # Esc — отмена
-                mods = (MOD_CTRL if ev.state & 0x4 else 0) | (MOD_SHIFT if ev.state & 0x1 else 0) | \
-                       (1 if ev.state & 0x20000 else 0)
-                # Для F1..F24 и спецклавиш разрешаем без модификаторов (mods=0)
-                is_fn = (0x70 <= ev.keycode <= 0x87) or ev.keycode in (0x2D, 0x2E, 0x24, 0x23, 0x21, 0x22, 0x13, 0x91, 0xC0)
-                bad = (not mods and not is_fn) or (mods == MOD_CTRL and ev.keycode in (0x41, 0x43, 0x56, 0x58, 0x5A))
-                if bad:
-                    self.log(tr("key_bad"))
-                else:
-                    self.cfg[target] = [ev.keycode, mods]
-                    self.save_cfg()
-                    if target == "scan_key":
-                        self.start_scan_hotkey()
-                    else:
-                        self.start_hide_hotkey()
-            if btn.winfo_exists():
-                btn.configure(text=key_name(*self.cfg[target]))
+            if ev.keycode == 27:  # Esc — отмена
+                finish(save=False)
+                return "break"
+            mods = (MOD_CTRL if ev.state & 0x4 else 0) | (MOD_SHIFT if ev.state & 0x1 else 0) | \
+                   (1 if ev.state & 0x20000 else 0)
+            finish(save=True, keycode=ev.keycode, mods=mods)
             return "break"
 
+        def on_focus_out(ev):
+            if ev.widget == self.root:
+                finish(save=False)
+
         self.root.bind("<KeyPress>", on_key)
+        self.root.bind("<FocusOut>", on_focus_out)
 
     def set_flag(self, key, value):
         self.cfg[key] = bool(value)
@@ -849,6 +884,8 @@ class App:
         self.logbox.configure(state="normal")
         self.logbox.insert("end", t, "time")
         self.logbox.insert("end", msg + "\n", "gold" if gold else ())
+        if int(self.logbox.index("end-1c").split(".")[0]) > 500:
+            self.logbox.delete("1.0", "100.0")
         self.logbox.see("end")
         self.logbox.configure(state="disabled")
 
@@ -877,6 +914,8 @@ class App:
         if True:
             if kind == "log":
                 self.log_lines.append(tuple(a))
+                if len(self.log_lines) > 200:
+                    self.log_lines = self.log_lines[-200:]
                 self._log_insert(*a)
             elif kind == "price":
                 self.overlay.price_card("price", *a, seconds=float(self.cfg["label_seconds"]))
@@ -908,15 +947,25 @@ class App:
                 self.render_icons()
 
     def _refresh_labels(self):
+        cache = self._ui_cache
         if self.prices.divine:
-            self.price_lbl.configure(text=tr("prices_info", league=self.prices.league,
-                                             div=f"{self.prices.divine:.0f}", n=len(self.prices.chaos)))
-        self.status_lbl.configure(text=self.status)
+            pt = tr("prices_info", league=self.prices.league,
+                    div=f"{self.prices.divine:.0f}", n=len(self.prices.chaos))
+            if cache.get("price") != pt:
+                cache["price"] = pt
+                self.price_lbl.configure(text=pt)
+        if cache.get("status") != self.status:
+            cache["status"] = self.status
+            self.status_lbl.configure(text=self.status)
         found = poe_running()
-        self.poe_lbl.configure(text=tr("poe_found") if found else tr("poe_missing"),
-                               fg=T.GREEN if found else T.ORANGE)
-        self.hidden_lbl.configure(text=tr("overlay_hidden") if self.hidden else tr("overlay_shown"),
-                                  fg=T.ORANGE if self.hidden else T.GREEN)
+        if cache.get("poe") != found:
+            cache["poe"] = found
+            self.poe_lbl.configure(text=tr("poe_found") if found else tr("poe_missing"),
+                                   fg=T.GREEN if found else T.ORANGE)
+        if cache.get("hid") != self.hidden:
+            cache["hid"] = self.hidden
+            self.hidden_lbl.configure(text=tr("overlay_hidden") if self.hidden else tr("overlay_shown"),
+                                      fg=T.ORANGE if self.hidden else T.GREEN)
         if self.pw is not None and self.pw.win.winfo_exists():
             self.pw.refresh_if_needed()
         now = time.time()

@@ -196,6 +196,8 @@ class KeyWatch(threading.Thread):
     def __init__(self, on_dismiss=None):
         super().__init__(daemon=True)
         self.ok = False
+        self.tid = None
+        self._hhook = None
         self.on_dismiss = on_dismiss
         self.last_c = None       # (время, нажато программой?)
         self.last_other = 0.0    # время последней Ctrl/Alt+клавиша (не C)
@@ -205,15 +207,24 @@ class KeyWatch(threading.Thread):
     def run(self):
         import time as _t
         self._time = _t.monotonic
+        self.tid = ctypes.windll.kernel32.GetCurrentThreadId()
         user32.SetWindowsHookExW.restype = wt.HHOOK
         user32.SetWindowsHookExW.argtypes = [ctypes.c_int, _HOOKPROC, wt.HINSTANCE, wt.DWORD]
         user32.CallNextHookEx.argtypes = [wt.HHOOK, ctypes.c_int, wt.WPARAM, wt.LPARAM]
         user32.CallNextHookEx.restype = ctypes.c_ssize_t
-        h = user32.SetWindowsHookExW(13, self._proc, None, 0)  # WH_KEYBOARD_LL
-        self.ok = bool(h)
+        self._hhook = user32.SetWindowsHookExW(13, self._proc, None, 0)  # WH_KEYBOARD_LL
+        self.ok = bool(self._hhook)
         msg = wt.MSG()
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
             pass
+        if self._hhook:
+            user32.UnhookWindowsHookEx(self._hhook)
+            self._hhook = None
+
+    def stop(self):
+        if self.tid:
+            user32.PostThreadMessageW(self.tid, 0x0012, 0, 0)  # WM_QUIT
+            self.join(timeout=1)
 
     def _hook(self, code, wparam, lparam):
         try:

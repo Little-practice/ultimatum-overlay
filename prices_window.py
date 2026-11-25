@@ -142,8 +142,9 @@ class PricesWindow:
             keys = {k for k in keys if k in p.custom}
         q = self.q.get().strip().lower()
         if q:
-            # по-русски ищем через словарь русских названий
-            en = {k for k, r in p.ru_names.items() if q in r.lower()} if not q.isascii() else set()
+            q_yo = q.replace("ё", "е")
+            # по-русски ищем через словарь русских названий (учитывая ё/е)
+            en = {k for k, r in p.ru_names.items() if q_yo in r.lower().replace("ё", "е")} if not q.isascii() else set()
             keys = {k for k in keys if q in k or k in en}
         return sorted(keys, key=lambda k: -(p.custom.get(k) or p.chaos.get(k) or 0))
 
