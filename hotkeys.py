@@ -7,9 +7,15 @@ user32 = ctypes.windll.user32
 MOD_ALT, MOD_CTRL, MOD_SHIFT = 0x1, 0x2, 0x4
 VK_NAMES = {**{0x6F + i: f"F{i}" for i in range(1, 25)}, **{c: chr(c) for c in range(0x30, 0x3A)},
             **{c: chr(c) for c in range(0x41, 0x5B)}, **{0x60 + i: f"Num{i}" for i in range(10)},
+            0x04: "Mouse3", 0x05: "Mouse4", 0x06: "Mouse5",
+            0x09: "Tab", 0x14: "CapsLock",
             0x2D: "Insert", 0x2E: "Delete", 0x24: "Home", 0x23: "End", 0x21: "PageUp", 0x22: "PageDown",
             0x13: "Pause", 0x91: "ScrollLock", 0xC0: "`", 0x6A: "Num*", 0x6B: "Num+", 0x6D: "Num-",
-            0x6F: "Num/", 0x20: "Space"}
+            0x6F: "Num/", 0x20: "Space",
+            0xDB: "[", 0xDD: "]", 0xDC: "\\", 0xBA: ";", 0xDE: "'", 0xBC: ",", 0xBE: ".",
+            0xBF: "/", 0xBD: "-", 0xBB: "="}
+
+MOUSE_VKS = {0x04, 0x05, 0x06}
 
 
 def key_name(vk, mods):
@@ -181,28 +187,76 @@ class _KBD(ctypes.Structure):
                 ("dwExtraInfo", ctypes.c_size_t)]
 
 
+class _MSLL(ctypes.Structure):
+    _fields_ = [("pt", wt.POINT), ("mouseData", wt.DWORD), ("flags", wt.DWORD),
+                ("time", wt.DWORD), ("dwExtraInfo", ctypes.c_size_t)]
+
+
 _HOOKPROC = ctypes.WINFUNCTYPE(ctypes.c_ssize_t, ctypes.c_int, wt.WPARAM, wt.LPARAM)
 _MODIFIERS = {0x10, 0x11, 0x12, 0xA0, 0xA1, 0xA2, 0xA3, 0xA4, 0xA5, 0x5B, 0x5C}
+_WM_SYNC_MOUSE = 0x8001
 
 
 class KeyWatch(threading.Thread):
-    """Только слушает клавиатуру (ничего не нажимает и не блокирует).
-    Нужен, чтобы отличить Ctrl+C, нажатый человеком, от Ctrl+C, который сделал другой прайсчекер
-    после своей комбинации (Ctrl+D, Ctrl+Shift+…, Alt+D и т. п.)."""
+    """Только слушает клавиатуру (и боковые кнопки мыши, если они привязаны), ничего не нажимает и не блокирует.
+    Отличает физический Ctrl+C от чужих прайсчекеров, и пассивно обрабатывает F2/Mouse4/Mouse5 без захвата клавиши."""
     COPY_WINDOW = 1.5   # Ctrl+C должен быть не раньше стольких секунд до изменения буфера
     OTHER_WINDOW = 0.8  # другая комбинация незадолго до Ctrl+C — значит, копировал чужой прайсчекер
     BLIND = 3.0         # хук не видел вообще никаких нажатий столько секунд — значит, он «слепой»
 
-    def __init__(self, on_dismiss=None):
+    def __init__(self, on_dismiss=None, on_scan=None, on_hide=None, is_poe_fg=None):
         super().__init__(daemon=True)
         self.ok = False
         self.tid = None
         self._hhook = None
+        self._mhook = None
         self.on_dismiss = on_dismiss
+        self.on_scan = on_scan
+        self.on_hide = on_hide
+        self.is_poe_fg = is_poe_fg or (lambda: True)
+        self.scan_key = None   # (vk, mods)
+        self.hide_key = None   # (vk, mods)
+        self.paused = False
+        self._mouse_capture_cb = None
+        self._pressed = set()
         self.last_c = None       # (время, нажато программой?)
         self.last_other = 0.0    # время последней Ctrl/Alt+клавиша (не C)
         self.last_any = 0.0      # время любого нажатия
         self._proc = _HOOKPROC(self._hook)
+        self._mproc = _HOOKPROC(self._mhook_proc)
+
+    def set_bindings(self, scan_key=None, hide_key=None, paused=None):
+        if scan_key is not None:
+            self.scan_key = tuple(scan_key)
+        if hide_key is not None:
+            self.hide_key = tuple(hide_key)
+        if paused is not None:
+            self.paused = bool(paused)
+        self._sync_mouse_hook()
+
+    def set_mouse_capture(self, cb):
+        self._mouse_capture_cb = cb
+        self._sync_mouse_hook()
+
+    def _need_mouse_hook(self):
+        if self._mouse_capture_cb is not None:
+            return True
+        for k in (self.scan_key, self.hide_key):
+            if k and k[0] in MOUSE_VKS:
+                return True
+        return False
+
+    def _sync_mouse_hook(self):
+        if self.tid:
+            user32.PostThreadMessageW(self.tid, _WM_SYNC_MOUSE, 0, 0)
+
+    def _apply_mouse_hook(self):
+        want = self._need_mouse_hook()
+        if want and not self._mhook:
+            self._mhook = user32.SetWindowsHookExW(14, self._mproc, None, 0)  # WH_MOUSE_LL
+        elif not want and self._mhook:
+            user32.UnhookWindowsHookEx(self._mhook)
+            self._mhook = None
 
     def run(self):
         import time as _t
@@ -214,9 +268,14 @@ class KeyWatch(threading.Thread):
         user32.CallNextHookEx.restype = ctypes.c_ssize_t
         self._hhook = user32.SetWindowsHookExW(13, self._proc, None, 0)  # WH_KEYBOARD_LL
         self.ok = bool(self._hhook)
+        self._apply_mouse_hook()
         msg = wt.MSG()
         while user32.GetMessageW(ctypes.byref(msg), None, 0, 0) > 0:
-            pass
+            if msg.message == _WM_SYNC_MOUSE:
+                self._apply_mouse_hook()
+        if self._mhook:
+            user32.UnhookWindowsHookEx(self._mhook)
+            self._mhook = None
         if self._hhook:
             user32.UnhookWindowsHookEx(self._hhook)
             self._hhook = None
@@ -226,25 +285,91 @@ class KeyWatch(threading.Thread):
             user32.PostThreadMessageW(self.tid, 0x0012, 0, 0)  # WM_QUIT
             self.join(timeout=1)
 
+    @staticmethod
+    def _current_mods():
+        ctrl = bool(user32.GetAsyncKeyState(0x11) & 0x8000)
+        shift = bool(user32.GetAsyncKeyState(0x10) & 0x8000)
+        alt = bool(user32.GetAsyncKeyState(0x12) & 0x8000)
+        return (MOD_CTRL if ctrl else 0) | (MOD_SHIFT if shift else 0) | (MOD_ALT if alt else 0)
+
     def _hook(self, code, wparam, lparam):
         try:
-            if code == 0 and wparam in (0x100, 0x104):  # WM_KEYDOWN / WM_SYSKEYDOWN
+            if code == 0:
                 k = ctypes.cast(lparam, ctypes.POINTER(_KBD)).contents
-                self.on_key(k.vkCode, bool(k.flags & 0x10), self._time())
+                if wparam in (0x100, 0x104):  # WM_KEYDOWN / WM_SYSKEYDOWN
+                    self.on_key(k.vkCode, bool(k.flags & 0x10), self._time())
+                elif wparam in (0x101, 0x105):  # WM_KEYUP / WM_SYSKEYUP
+                    self._pressed.discard(k.vkCode)
         except Exception:
             pass
         return user32.CallNextHookEx(None, code, wparam, lparam)
 
-    def on_key(self, vk, injected, now):
-        self.last_any = now
-        if vk in (0x1B, 0x20):   # Esc или Пробел в игре — сигнал снять оверлей
-            if self.on_dismiss:
+    def _mhook_proc(self, code, wparam, lparam):
+        try:
+            if code == 0 and wparam != 0x0200:  # игнорируем WM_MOUSEMOVE сразу
+                vk = 0
+                down = False
+                if wparam == 0x0207:  # WM_MBUTTONDOWN
+                    vk, down = 0x04, True
+                elif wparam == 0x0208:  # WM_MBUTTONUP
+                    vk = 0x04
+                elif wparam in (0x020B, 0x020C):  # WM_XBUTTONDOWN / WM_XBUTTONUP
+                    m = ctypes.cast(lparam, ctypes.POINTER(_MSLL)).contents
+                    xbtn = (m.mouseData >> 16) & 0xFFFF
+                    vk = 0x05 if xbtn == 1 else 0x06 if xbtn == 2 else 0
+                    down = (wparam == 0x020B)
+                if vk:
+                    if down:
+                        if vk not in self._pressed:
+                            self._pressed.add(vk)
+                            mods = self._current_mods()
+                            if self._mouse_capture_cb is not None:
+                                cb = self._mouse_capture_cb
+                                self._mouse_capture_cb = None
+                                self._sync_mouse_hook()
+                                cb(vk, mods)
+                            else:
+                                self._dispatch_binding(vk, mods, injected=False)
+                    else:
+                        self._pressed.discard(vk)
+        except Exception:
+            pass
+        return user32.CallNextHookEx(None, code, wparam, lparam)
+
+    def _dispatch_binding(self, vk, mods, injected):
+        if self.paused or injected:
+            return
+        cur = (vk, mods)
+        if self.hide_key and cur == self.hide_key:
+            if self.on_hide:
                 try:
-                    self.on_dismiss()
+                    self.on_hide()
                 except Exception:
                     pass
+            return
+        if self.scan_key and cur == self.scan_key:
+            if self.on_scan and self.is_poe_fg():
+                try:
+                    self.on_scan()
+                except Exception:
+                    pass
+
+    def on_key(self, vk, injected, now):
+        self.last_any = now
         if vk in _MODIFIERS:
             return
+        first_press = vk not in self._pressed
+        self._pressed.add(vk)
+
+        if first_press and not injected and not self.paused:
+            if vk in (0x1B, 0x20) and self.is_poe_fg():   # Esc или Пробел в игре — сигнал снять оверлей
+                if self.on_dismiss:
+                    try:
+                        self.on_dismiss()
+                    except Exception:
+                        pass
+            self._dispatch_binding(vk, self._current_mods(), injected)
+
         ctrl = user32.GetAsyncKeyState(0x11) & 0x8000
         alt = user32.GetAsyncKeyState(0x12) & 0x8000
         if ctrl and vk == 0x43 and not alt:   # Ctrl+C (физически та же клавиша и в русской раскладке)

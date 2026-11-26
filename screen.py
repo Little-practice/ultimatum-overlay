@@ -50,10 +50,16 @@ class Screen:
                 return pt.x, pt.y, r.right, r.bottom
         return 0, 0, user32.GetSystemMetrics(0), user32.GetSystemMetrics(1)
 
+    @staticmethod
+    def scale_and_origin(W, H):
+        """Масштаб интерфейса PoE 1: на 16:9 и шире — по высоте; на 16:10 / 4:3 — сжат по ширине."""
+        return min(H / REF_H, W / REF_W)
+
     def to_screen(self, x, y):
         L, T, W, H = self.rect()
-        s = H / REF_H
-        return int(round(L + W / 2 + (x - REF_W / 2 + self.dx) * s)), int(round(T + (y + self.dy) * s))
+        s = self.scale_and_origin(W, H)
+        return (int(round(L + W / 2 + (x - REF_W / 2 + self.dx) * s)),
+                int(round(T + H / 2 + (y - REF_H / 2 + self.dy) * s)))
 
     def grab(self, x1, y1, x2, y2):
         if self.sct is None:
@@ -76,9 +82,65 @@ class Screen:
         return self.grab(x - h, y - h, x + h, y + h)
 
 
+_elev_cache = {"hwnd": 0, "mismatch": False}
+
+
+def poe_hwnd():
+    """HWND окна Path of Exile (или 0)."""
+    return user32.FindWindowW("POEWindowClass", None) or user32.FindWindowW(None, "Path of Exile")
+
+
 def poe_running():
     """Есть ли окно Path of Exile."""
-    return bool(user32.FindWindowW("POEWindowClass", None) or user32.FindWindowW(None, "Path of Exile"))
+    return bool(poe_hwnd())
+
+
+def poe_foreground():
+    """Активно ли сейчас окно Path of Exile."""
+    hwnd = poe_hwnd()
+    return bool(hwnd and user32.GetForegroundWindow() == hwnd)
+
+
+def poe_is_elevated_mismatch():
+    """True, если PoE запущен от имени Администратора, а оверлей — нет (UIPI блокирует хоткеи)."""
+    hwnd = poe_hwnd()
+    if not hwnd:
+        return False
+    if _elev_cache["hwnd"] == hwnd:
+        return _elev_cache["mismatch"]
+    mismatch = False
+    try:
+        is_admin = bool(ctypes.windll.shell32.IsUserAnAdmin())
+        if not is_admin:
+            pid = wt.DWORD(0)
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            if pid.value:
+                k32 = ctypes.windll.kernel32
+                adv = ctypes.windll.advapi32
+                h_proc = k32.OpenProcess(0x1000, False, pid.value)  # PROCESS_QUERY_LIMITED_INFORMATION
+                if not h_proc:
+                    if k32.GetLastError() == 5:  # ERROR_ACCESS_DENIED
+                        mismatch = True
+                else:
+                    try:
+                        h_tok = wt.HANDLE()
+                        if adv.OpenProcessToken(h_proc, 0x0008, ctypes.byref(h_tok)):  # TOKEN_QUERY
+                            try:
+                                elev = wt.DWORD(0)
+                                ret_len = wt.DWORD(0)
+                                if adv.GetTokenInformation(h_tok, 20, ctypes.byref(elev), ctypes.sizeof(elev), ctypes.byref(ret_len)):
+                                    mismatch = bool(elev.value)
+                            finally:
+                                k32.CloseHandle(h_tok)
+                        elif k32.GetLastError() == 5:
+                            mismatch = True
+                    finally:
+                        k32.CloseHandle(h_proc)
+    except Exception:
+        mismatch = False
+    _elev_cache["hwnd"] = hwnd
+    _elev_cache["mismatch"] = mismatch
+    return mismatch
 
 
 def cursor_pos():

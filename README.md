@@ -28,17 +28,16 @@
   - Опция включения/выключения карточки награды в настройках программы.
 - **Все 2 065+ изображений вшиты в программу (работает офлайн):**
   - Все 471 гадальных карт и 1 594 уникальных предметов упакованы прямо в `.exe`. Изображения отображаются мгновенно и не требуют интернет-соединения.
-- **Точная оценка камней умений и поддержки (Gems):**
-  - Прайсчекер считывает точный уровень (1–21), качество (+0–23%) и статус осквернения (Corrupted), показывая актуальную цену нужного варианта с poe.ninja (например, Разряд 20/23% осквернённый).
-- **Подсказка усложнений (модов):**
+- **Точная оценка камней и редких вариантов (Gems, Voices, Forbidden Jewels, Mageblood):**
+  - Прайсчекер считывает точный уровень камня (1–21), качество (+0–23%) и статус осквернения (Corrupted), а также количество малых пассивок на `Voices` (1/3/5/7), нотаблы `Forbidden Flesh` / `Forbidden Flame` и число флаконов на `Mageblood`.
+- **Подсказка усложнений (модов) по нажатию клавиши (100% GGG ToS Safe):**
+  - Пассивный хоткей (по умолчанию `F2`, поддерживаются `Mouse3`/`Mouse4`/`Mouse5` и одиночные клавиши) срабатывает только внутри окна PoE и не блокирует `F2` в других программах Windows.
   - В окне ультиматума обводит самый простой разрешённый мод (для 10 волн) или показывает «можно / нельзя» на предложенном (для 13 волн).
   - Встроенный настраиваемый тир-лист из 47 модов, включая моды Миража.
 - **Рамка вокруг «Удвоить» (Double Down):**
   - Заметная пульсирующая золотая рамка вокруг кнопки удвоения, которую невозможно пропустить.
-- **Бесшовное автообновление:**
-  - Программа сама проверяет наличие новых версий на GitHub Releases при запуске и каждые 2 часа в фоне.
-  - Скачивает обновление, проверяет контрольную сумму SHA-256 и автоматически перезапускается на свежую версию.
-  - Окно «Что нового в патче» при первом старте после обновления и кнопка быстрого просмотра в подвале.
+- **Безопасное автообновление:**
+  - Программа проверяет новые версии на GitHub Releases, тихо скачивает и проверяет SHA-256, и устанавливает обновление при следующем запуске (или по кнопке в шапке) — без перезапусков посреди боя.
 - **Умный перезапуск (Single Instance):**
   - Если программа уже была запущена, повторный запуск чисто завершает старый экземпляр и открывает новый без блокировок и ошибок.
 - **Не мешает другим прайсчекерам:**
@@ -93,17 +92,16 @@ It **never automates gameplay or sends clicks**: it only analyzes screen regions
   - Toggle preview on/off in program settings.
 - **2,065+ Bundled Offline Assets:**
   - All 471 divination cards and 1,594 unique items are packaged directly inside the `.exe` — zero load times, works 100% offline.
-- **Accurate Gem Pricing (Level / Quality / Corrupted):**
-  - Accurately parses gem level (1–21), quality (+0–23%), and corrupted status, showing the exact market variant price (e.g. Discharge 20/23% corrupted).
-- **Modifier Hints:**
+- **Accurate Gem & Multi-Variant Unique Pricing (Gems, Voices, Forbidden Jewels, Mageblood):**
+  - Parses gem level (1–21), quality (+0–23%), and corrupted status, as well as `Voices` passive counts (1/3/5/7), `Forbidden Flesh` / `Forbidden Flame` notables, and `Mageblood` flask counts.
+- **On-Demand Modifier Hints (100% GGG ToS Safe):**
+  - Passive hotkey (default `F2`; supports `Mouse3`/`Mouse4`/`Mouse5` and standalone keys) triggers only when PoE is focused and never blocks `F2` in other Windows apps.
   - Highlights the easiest allowed modifier in 10-wave mode or displays allowed/forbidden on the given modifier in 13-wave mode.
   - Fully customizable tier list of 47 modifiers, including Mirage modifiers.
 - **Double Down Highlight:**
   - Pulsing golden frame around the Double Down button so you never miss an opportunity.
-- **Seamless Auto-Updates:**
-  - Automatically queries GitHub Releases on launch and periodically in background.
-  - Downloads, verifies SHA-256 checksum, and seamlessly updates the executable without manual downloading.
-  - "What's New" modal on first run after each update and quick-access button in footer.
+- **Safe Background Auto-Updates:**
+  - Queries GitHub Releases, downloads and verifies SHA-256 silently, and installs on next launch (or via the header button) — never restarting mid-combat.
 - **Smart Relaunch (Single Instance):**
   - Running a new copy cleanly terminates any old running instance without conflict or "already running" errors.
 - **Plays Well With Other Price Checkers:**

@@ -78,7 +78,7 @@ def save_library(lib):
     write_json(LIB_FILE, [{k: v for k, v in e.items() if k != "img"} for e in lib], indent=1)
 
 
-def add_icon(lib, img, tier="Новые", allowed=False, name=""):
+def add_icon(lib, img, tier="Mirage", allowed=False, name=""):
     os.makedirs(ICON_DIR, exist_ok=True)
     n = 1
     while os.path.exists(os.path.join(ICON_DIR, f"icon_{n:03d}.png")):

@@ -1,5 +1,32 @@
 # Changelog / Список изменений
 
+## 1.4.3
+
+**RU**
+- **Пассивный хоткей скана (`F2`) и поддержка мыши (`Mouse4` / `Mouse5`)**:
+  - Клавиша сканирования больше не блокируется глобально в Windows (`RegisterHotKey` заменён на пассивное прослушивание при активном окне PoE).
+  - Добавлена поддержка боковых кнопок мыши (`Mouse3` / `Mouse4` / `Mouse5`) и одиночных клавиш для скана.
+  - Добавлено предупреждение в шапке окна, если PoE запущен от имени Администратора (UIPI).
+- **Безопасное автообновление и кэш**:
+  - Устранён откат свежего кэша (`prices_cache.json`, `names_ru.json`, `leagues.json`) старыми вшитыми файлами при каждом старте `.exe`.
+  - Автообновление больше не перезапускает программу посреди боя — обновление скачивается в фоне и применяется при следующем запуске (или по кнопке в шапке).
+- **Точный прайсчек и Ультиматум**:
+  - Поддержка вариантов `Voices` (1/3/5/7), `Forbidden Flesh` / `Forbidden Flame` (нотаблы EN/RU), `Mageblood` (2–5 флаконов) и пометка разброса цен.
+  - Исправлено распознавание `На X% больше здоровья монстров` в русском клиенте, разделены цвета тиров, цена на карточках предпросмотра перенесена наверх.
+  - Исправлены русские Пробуждённые камни, неопознанные уники, особые Начертанные ультиматумы (`No Cost`, `Mirrors Rare Item`), режим 10 волн (игнорирует серые моды) и звук тревоги на запрещённый мод.
+  - Картинки предпросмотра упакованы в единый ZIP-архив для ускорения старта `.exe`.
+
+**EN**
+- **Passive Scan Hotkey (`F2`) & Mouse4/Mouse5 Support**:
+  - Scan hotkey is no longer swallowed globally across Windows; it listens passively and triggers only when PoE is in the foreground.
+  - Added `Mouse3`/`Mouse4`/`Mouse5` and standalone key binding support for Ultimatum scanning, plus an Administrator elevation mismatch warning.
+- **Safe Auto-Update & Cache Integrity**:
+  - Fixed bundled cache overwrite bug where fresh `prices_cache.json` / `names_ru.json` / `leagues.json` were overwritten on launch.
+  - Updates stage silently and apply on next launch (or when clicking the header update button) instead of restarting mid-combat.
+- **Accurate Pricing, Ultimatum Fixes & Faster Startup**:
+  - Added variant pricing for `Voices`, `Forbidden Flesh`/`Flame` notables (EN & RU), and `Mageblood`, plus price-range warnings and unidentified unique handling.
+  - Fixed Russian `% more Monster Life` parsing, moved price/profit to the top of preview cards, fixed Russian Awakened gems, 10-wave greyed-out mod filtering, forbidden-mod alert sound, and single-ZIP preview bundling.
+
 ## 1.4.2
 
 **RU**

@@ -70,6 +70,8 @@ S = {
     "sound_reset": ("Звук — стандартный", "Sound — default"),
     "key_bad": ("Нужна клавиша с Ctrl, Alt или Shift (и не Ctrl+C / V / X / A / Z)",
                 "Use a key with Ctrl, Alt or Shift (and not Ctrl+C / V / X / A / Z)"),
+    "key_bad_scan": ("Выбери клавишу или Mouse3/4/5 (не Esc/Пробел/Enter и не Ctrl+C/V/X/A/Z)",
+                     "Pick a key or Mouse3/4/5 (not Esc/Space/Enter or Ctrl+C/V/X/A/Z)"),
     "already_running": ("Ultimatum overlay уже запущен — его значок в трее (возле часов).",
                         "Ultimatum overlay is already running — its icon is in the tray (near the clock)."),
     "paste": ("Вставить", "Paste"),
@@ -88,6 +90,17 @@ S = {
                   "The program is minimised to the tray and keeps working. Quit — right-click the tray icon."),
     "updating": ("Обновляю до версии {v}…", "Updating to version {v}…"),
     "update_err": ("Не удалось обновиться: {e}", "Update failed: {e}"),
+    "update_staged": ("Доступно обновление v{v} — установится при следующем запуске (или нажми кнопку вверху)",
+                      "Update v{v} ready — installs on next launch (or click button above)"),
+    "update_badge": ("⬆ Обновить до v{v}", "⬆ Update to v{v}"),
+    "poe_admin_warn": ("⚠ PoE от Админа — перезапусти оверлей от Администратора",
+                       "⚠ PoE runs as Admin — restart overlay as Administrator"),
+    "base_short": ("база", "base"),
+    "item_fallback": ("Предмет", "Item"),
+    "unidentified_unique": ("неопознанный уник (база: {base})", "unidentified unique (base: {base})"),
+    "up_to": ("до {c}c", "up to {c}c"),
+    "ult_special_mirror": ("Зеркалит редкий предмет (цена зависит от вещи)", "Mirrors Rare Item (value depends on item)"),
+    "ult_special_rare": ("Обмен редкого предмета", "Rare item exchange"),
     "help_title": ("Как пользоваться", "How to use"),
     "help": ((
         "1. Игру нужно запустить в оконном режиме или «оконном без рамки» (Windowed Fullscreen). "
@@ -95,10 +108,10 @@ S = {
         "2. Цена предмета: наведи на него курсор в игре и нажми Ctrl+C — рядом появится карточка с ценой "
         "poe.ninja. Если копирует другой прайсчекер (Ctrl+D и т. п.), карточка не появится.\n\n"
         "3. Моды ультиматума: в списке «Усложнения» нажми на строку, чтобы разрешить или запретить мод. "
-        "Когда в игре откроется алтарь ультиматума, нажми F2 (клавишу можно сменить в настройках) — оверлей разово "
-        "обведёт самый простой разрешённый мод («БРАТЬ» / «МОЖНО») или запрещённый («НЕЛЬЗЯ»). Разовое чтение экрана "
-        "строго по нажатию клавиши на 100% соответствует правилам GGG (без риска для аккаунта). Подсказка "
-        "исчезает сама через 3.5 сек (до спавна монстров), либо сразу при повторном нажатии F2, Esc или Пробела.\n\n"
+        "Когда в игре откроется алтарь ультиматума, нажми F2 (клавишу или боковую кнопку мыши можно сменить в настройках) — "
+        "оверлей разово обведёт самый простой разрешённый мод («БРАТЬ» / «МОЖНО») или запрещённый («НЕЛЬЗЯ»). Клавиша "
+        "работает только внутри игры и не мешает в других программах Windows. Подсказка исчезает сама через 3.5 сек, "
+        "сразу по Esc/Пробелу, а повторное нажатие F2 заново сканирует открытый алтарь.\n\n"
         "4. Ctrl+Shift+H — скрыть / показать оверлей (клавишу можно сменить). Крестик окна сворачивает "
         "программу в трей, выход — через значок в трее."
     ), (
@@ -107,10 +120,10 @@ S = {
         "2. Item price: hover an item in game and press Ctrl+C — a price card from poe.ninja appears next to "
         "it. If another price checker copies the item (Ctrl+D etc.), the card does not appear.\n\n"
         "3. Ultimatum modifiers: click a row in the “Modifiers” list to allow or forbid it. When the Ultimatum "
-        "altar opens in game, press F2 (the hotkey can be customized) — the overlay circles the easiest allowed "
-        "modifier (“TAKE” / “OK”) or a forbidden one (“NO”). Manual one-time screen read strictly on keypress "
-        "is 100% GGG ToS compliant (zero ban risk). The hint disappears automatically after 3.5 sec (before "
-        "monsters spawn), or instantly on pressing F2 again, Esc, or Space.\n\n"
+        "altar opens in game, press F2 (the hotkey or mouse button can be customized) — the overlay circles the easiest "
+        "allowed modifier (“TAKE” / “OK”) or a forbidden one (“NO”). The hotkey only triggers inside PoE and never "
+        "blocks F2 in other Windows apps. Hints auto-hide after 3.5 sec or immediately on Esc/Space; pressing F2 again "
+        "rescans an open altar.\n\n"
         "4. Ctrl+Shift+H — hide / show the overlay (the key can be changed). The window close button minimises "
         "the program to the tray; quit via the tray icon."
     )),
@@ -125,8 +138,8 @@ S = {
     "panel_not_found": ("Окно алтаря ультиматума не найдено на экране", "Ultimatum altar window not found on screen"),
     "press_key": ("нажми клавишу…", "press a key…"),
     "key_busy": ("Клавиша {k} занята другой программой — назначь другую", "Key {k} is taken by another program — pick another one"),
-    "key_hint": ("Нажми на кнопку и затем нужную клавишу (можно с Ctrl/Shift/Alt). Esc — отмена.",
-                 "Click the button, then press a key (Ctrl/Shift/Alt allowed). Esc cancels."),
+    "key_hint": ("Нажми на кнопку и затем нужную клавишу или Mouse3/4/5 (можно с Ctrl/Shift/Alt). Esc — отмена.",
+                 "Click the button, then press a key or Mouse3/4/5 (Ctrl/Shift/Alt allowed). Esc cancels."),
     "overlay_hidden": ("скрыт", "hidden"),
     "overlay_shown": ("показан", "shown"),
     "sound": ("Звук на «Удвоить»", "Sound on Double Down"),

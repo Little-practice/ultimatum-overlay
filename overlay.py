@@ -58,8 +58,8 @@ class Overlay:
 
     def _xy(self, x, y):
         L, T_, W, H = self.rect
-        s = H / REF_H
-        return W / 2 + (x - REF_W / 2 + self.scr.dx) * s, (y + self.scr.dy) * s
+        s = Screen.scale_and_origin(W, H)
+        return W / 2 + (x - REF_W / 2 + self.scr.dx) * s, H / 2 + (y - REF_H / 2 + self.scr.dy) * s
 
     def _box(self, item_id, default=(0, 0, 0, 0)):
         return self.cv.bbox(item_id) or default
@@ -117,7 +117,7 @@ class Overlay:
         self._place()
         self.cv.delete("all")
         self._img_refs = []
-        s = self.rect[3] / REF_H
+        s = Screen.scale_and_origin(self.rect[2], self.rect[3])
         for b in self.boxes.values():
             (self._ring if b[7] == "ring" else self._glow_rect)(s, *b[:7])
         for sx, sy, info, _ in self.cards.values():
@@ -223,7 +223,7 @@ class Overlay:
         ids.append(card_bg)
         return card_w + 8 * k, y - start_y + 4 * k
 
-    def _draw_preview_unique(self, k, x0, y, prev, ids):
+    def _draw_preview_unique(self, k, x0, y, prev, ids, compact=False):
         """Отрисовка карточки уникального предмета в стиле PoE (как в игре)."""
         box_w = max(int(320 * k), 280)
         start_y = y
@@ -271,16 +271,22 @@ class Overlay:
             y += 8 * k
 
         exps = prev.get("explicits") or []
-        for exp in exps:
+        shown_exps = exps[:6] if (compact and len(exps) > 7) else exps
+        for exp in shown_exps:
             exp_clean = re.sub(r'<[^>]+>', '', exp).strip()
             t_exp = self.cv.create_text(x0 + box_w / 2, y, text=exp_clean, anchor="n",
                                         font=(T.SANS, max(9, int(10 * k))), fill="#7e9cff",
                                         width=int(box_w - 24 * k), justify="center")
             ids.append(t_exp)
             y = self._box(t_exp, (0, 0, 0, y))[3] + 4 * k
+        if len(shown_exps) < len(exps):
+            t_more = self.cv.create_text(x0 + box_w / 2, y, text=f"... (+{len(exps) - len(shown_exps)})", anchor="n",
+                                         font=(T.SANS, max(8, int(9 * k))), fill="#7e7468")
+            ids.append(t_more)
+            y = self._box(t_more, (0, 0, 0, y))[3] + 4 * k
 
         flav = prev.get("flavour")
-        if flav:
+        if flav and not (compact and len(exps) > 5):
             flav_clean = re.sub(r'<[^>]+>', '', flav).strip()
             div4 = self.cv.create_line(x0 + 16 * k, y, x0 + box_w - 16 * k, y, fill="#3d2812")
             ids.append(div4)
@@ -313,6 +319,12 @@ class Overlay:
         ids.append(box_bg)
         return box_w + 8 * k, y - start_y + 4 * k
 
+    @staticmethod
+    def _life_style(pct, lang):
+        col = T.RED if pct >= 200 else T.ORANGE if pct >= 120 else "#e6c84a" if pct >= 70 else T.GREEN
+        txt = f"На {pct}% больше здоровья монстров" if lang == "ru" else f"{pct}% more Monster Life"
+        return col, txt
+
     def _card(self, s, sx, sy, info):
         """Карточка цены у курсора."""
         L, T_, W, H = self.rect
@@ -324,7 +336,7 @@ class Overlay:
         x0, y0 = sx - L + 22 * k, sy - T_ + 22 * k
         ids, y, width = [], y0 + pad + 3 * k, 0
 
-        prev = info.get("preview") if not info.get("error") else None
+        prev = info.get("preview") if not info.get("error") and not info.get("special") else None
         if prev:
             # 1. Заголовок Ультиматума
             t_title = self.cv.create_text(x0 + pad, y, text=info["name"], anchor="nw",
@@ -332,26 +344,11 @@ class Overlay:
             ids.append(t_title)
             bx1, by1, bx2, by2 = self._box(t_title, (x0, y, x0 + 100, y + 20))
             width = max(width, bx2 - x0 - pad)
-            y = by2 + 8 * k
+            y = by2 + 6 * k
 
-            # 2. Карточка предмета-награды (гадание или уник)
-            ptype = prev.get("type")
-            if ptype == "card":
-                pw, ph = self._draw_preview_card(k, x0 + pad, y, prev, ids)
-            elif ptype == "unique":
-                pw, ph = self._draw_preview_unique(k, x0 + pad, y, prev, ids)
-            else:
-                pw, ph = 0, 0
-
-            width = max(width, pw)
-            y += ph + 10 * k
-
-            # 3. Модификатор здоровья монстров (если есть)
+            # 2. Модификатор здоровья монстров (если есть)
             if info.get("life"):
-                pct = info["life"]
-                col = T.RED if pct >= 200 else T.ORANGE if pct >= 120 else T.GREEN
-                life_txt = (f"{pct}% больше здоровья монстров" if info.get("life_lang") == "ru"
-                            else f"{pct}% more Monster Life")
+                col, life_txt = self._life_style(info["life"], info.get("life_lang"))
                 t = self.cv.create_text(x0 + pad + 10 * k, y + 3 * k, text=life_txt.upper(),
                                         anchor="nw", font=(T.SANS, max(9, int(10 * k)), "bold"), fill=INK)
                 bx1, by1, bx2, by2 = self._box(t, (x0, y, x0 + 100, y + 20))
@@ -362,21 +359,15 @@ class Overlay:
                 width = max(width, bx2 + 8 * k - x0 - pad)
                 y = by2 + 8 * k
 
-            # 4. Детали ультиматума (Жертва / Награда)
+            # 3. Блок цены и профита (всегда наверху — не обрежется на длинных униках!)
             if info.get("detail"):
                 t_det = self.cv.create_text(x0 + pad, y, text=info["detail"], anchor="nw",
                                             font=(T.SANS, max(9, int(10 * k))), fill=T.MUTED)
                 ids.append(t_det)
                 bx1, by1, bx2, by2 = self._box(t_det, (x0, y, x0 + 100, y + 20))
                 width = max(width, bx2 - x0 - pad)
-                y = by2 + 6 * k
+                y = by2 + 4 * k
 
-            # 5. Разделитель
-            div_line = self.cv.create_line(x0 + pad, y, x0 + pad + max(width, 260 * k), y, fill="#3d3428")
-            ids.append(div_line)
-            y += 8 * k
-
-            # 6. Блок цены и профита
             big = (T.SERIF, int(20 * k), "bold")
             c_id = self.cv.create_text(x0 + pad, y, text=f"{info['chaos_text']} c", anchor="nw", font=big,
                                        fill=T.GOLD_HI if good else T.TXT)
@@ -411,6 +402,24 @@ class Overlay:
                 width = max(width, w_box[2] - x0 - pad)
                 y = w_box[3] + 2 * k
 
+            # 4. Разделитель перед карточкой предпросмотра
+            y += 4 * k
+            div_line = self.cv.create_line(x0 + pad, y, x0 + pad + max(width, 260 * k), y, fill="#3d3428")
+            ids.append(div_line)
+            y += 8 * k
+
+            # 5. Карточка предмета-награды (гадание или уник)
+            ptype = prev.get("type")
+            if ptype == "card":
+                pw, ph = self._draw_preview_card(k, x0 + pad, y, prev, ids)
+            elif ptype == "unique":
+                pw, ph = self._draw_preview_unique(k, x0 + pad, y, prev, ids, compact=(H < 900))
+            else:
+                pw, ph = 0, 0
+
+            width = max(width, pw)
+            y += ph + 6 * k
+
         else:
             # Обычный режим без карточки предпросмотра
             items = []
@@ -419,6 +428,8 @@ class Overlay:
                 items.append(("life", None, None))
             if info.get("error"):
                 items.append((info["error"], (T.SANS, int(10 * k)), "#ff9a8a"))
+            elif info.get("special"):
+                items.append((info["special"], (T.SANS, max(10, int(11 * k)), "bold"), T.GOLD_HI))
             else:
                 if info.get("detail"):
                     items.append((info["detail"], (T.SANS, max(9, int(10 * k))), T.MUTED))
@@ -426,10 +437,7 @@ class Overlay:
 
             for text, font, col in items:
                 if text == "life":
-                    pct = info["life"]
-                    col = T.RED if pct >= 200 else T.ORANGE if pct >= 120 else T.GREEN
-                    life_txt = (f"{pct}% больше здоровья монстров" if info.get("life_lang") == "ru"
-                                else f"{pct}% more Monster Life")
+                    col, life_txt = self._life_style(info["life"], info.get("life_lang"))
                     t = self.cv.create_text(x0 + pad + 10 * k, y + 3 * k, text=life_txt.upper(),
                                             anchor="nw", font=(T.SANS, max(9, int(11 * k)), "bold"), fill=INK)
                     bx1, by1, bx2, by2 = self._box(t, (x0, y, x0 + 100, y + 20))

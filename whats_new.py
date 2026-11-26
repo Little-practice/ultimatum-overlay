@@ -7,6 +7,46 @@ import theme as T
 from i18n import tr
 
 NOTES = {
+    "1.4.3": {
+        "title_ru": "Что нового в версии 1.4.3",
+        "title_en": "What's New in version 1.4.3",
+        "ru": [
+            ("🛡️ Пассивный F2 (без блокировки в Windows) и мышь Mouse4/Mouse5",
+             "• Клавиша сканирования (по умолчанию F2) больше не перехватывается глобально — она свободно работает в Проводнике, Excel и браузере, а оверлей срабатывает только внутри окна PoE.\n"
+             "• Добавлена поддержка боковых кнопок мыши (Mouse3 / Mouse4 / Mouse5) и одиночных клавиш для скана.\n"
+             "• Предупреждение в шапке, если PoE запущен от имени Администратора, а оверлей — нет."),
+
+            ("💎 Точная оценка Voices, Forbidden Flesh/Flame, Mageblood и камней",
+             "• Прайсчекер теперь различает количество малых пассивок на Voices (1 / 3 / 5 / 7), нотаблы на Forbidden Flesh / Forbidden Flame (на RU и EN) и число флаконов на Mageblood.\n"
+             "• Многовариантные предметы без точного варианта помечаются как неточные с указанием разброса цен («до …c»), а неопознанные уники больше не оцениваются как белая база.\n"
+             "• Исправлен прайсчек русских Пробуждённых камней («Пробуждённый: Наставник» и др.)."),
+
+            ("🔥 Начертанные ультиматумы, 10 волн, звук и автообновление",
+             "• Исправлена плашка «На X% больше здоровья монстров» в русском клиенте и разделены цвета тиров (30% / 70% / 120% / 200%).\n"
+             "• Цена и прибыль перенесены в верхнюю часть карточки предпросмотра — больше не обрезаются на длинных униках.\n"
+             "• В режиме «10 волн» оверлей больше не советует неактивные (серые) моды, а при запрещённом моде звучит сигнал тревоги.\n"
+             "• Автообновление больше не перезапускает программу посреди боя: скачивается тихо и устанавливается при следующем запуске (или по кнопке вверху).\n"
+             "• Картинки предпросмотра упакованы в единый ZIP-архив для ускорения старта .exe.")
+        ],
+        "en": [
+            ("🛡️ Passive F2 (No Global Block) & Mouse4/Mouse5 Support",
+             "• The scan hotkey (default F2) is no longer swallowed globally — it works normally in Explorer, Excel, and browsers, triggering only when PoE is focused.\n"
+             "• Added support for Mouse3 / Mouse4 / Mouse5 and standalone keys for altar scanning.\n"
+             "• Header warning when PoE is running as Administrator while the overlay is not."),
+
+            ("💎 Exact Pricing for Voices, Forbidden Flesh/Flame, Mageblood & Gems",
+             "• Distinguishes Voices passive counts (1 / 3 / 5 / 7), Forbidden Flesh / Forbidden Flame notables (EN & RU), and Mageblood flask counts.\n"
+             "• Multi-variant items without a specific variant are flagged as approximate with a price range ('up to …c'), and unidentified uniques are no longer priced as white bases.\n"
+             "• Fixed Russian Awakened gem lookups and fallback gem levels."),
+
+            ("🔥 Inscribed Ultimatums, 10-Wave Logic, Sound & Safe Updates",
+             "• Fixed '% more Monster Life' detection on the Russian client ('На X% больше здоровья монстров') with 4-tier color coding (30% / 70% / 120% / 200%).\n"
+             "• Price & net profit moved to the top of preview cards so they never clip on tall unique tooltips.\n"
+             "• 10-wave advisor ignores greyed-out unavailable modifiers and plays the alert sound on forbidden modifiers.\n"
+             "• Auto-updates no longer restart mid-combat: updates stage silently and apply on next launch (or via the header button).\n"
+             "• Preview images are bundled in a single ZIP archive for faster .exe startup.")
+        ]
+    },
     "1.4.2": {
         "title_ru": "Что нового в версии 1.4.2",
         "title_en": "What's New in version 1.4.2",
@@ -387,7 +427,6 @@ def show_whats_new(root, version, lang="ru", force=False):
 
     # Подвал с кнопкой
     def _close():
-        _detach_wheel()
         w.destroy()
 
     w.protocol("WM_DELETE_WINDOW", _close)
@@ -397,36 +436,14 @@ def show_whats_new(root, version, lang="ru", force=False):
     btn_txt = "Отлично, понятно!" if is_ru else "Got it!"
     T.button(foot, btn_txt, _close, fg=T.BG, bg=T.GOLD, hover=T.GOLD_HI).pack(side="right")
 
-    # Привязываем колесико мыши ко всем элементам окна и глобально
-    def _attach_wheel(event=None):
-        try:
-            w.bind_all("<MouseWheel>", _on_mousewheel)
-            w.bind_all("<Button-4>", _on_mousewheel)
-            w.bind_all("<Button-5>", _on_mousewheel)
-        except Exception:
-            pass
-
-    def _detach_wheel():
-        try:
-            w.unbind_all("<MouseWheel>")
-            w.unbind_all("<Button-4>")
-            w.unbind_all("<Button-5>")
-        except Exception:
-            pass
-
-    def _on_destroy(event):
-        if event.widget == w:
-            _detach_wheel()
-
-    w.bind("<Destroy>", _on_destroy)
-    w.bind("<Enter>", _attach_wheel)
-    _attach_wheel()
+    # Привязываем колесико мыши только к виджетам этого окна (не перехватывает скролл у «Цен»)
+    w.bind_class("UltWhatsNewScroll", "<MouseWheel>", _on_mousewheel)
+    w.bind_class("UltWhatsNewScroll", "<Button-4>", _on_mousewheel)
+    w.bind_class("UltWhatsNewScroll", "<Button-5>", _on_mousewheel)
 
     def _bind_mouse_recursive(widget):
         try:
-            widget.bind("<MouseWheel>", _on_mousewheel, add="+")
-            widget.bind("<Button-4>", _on_mousewheel, add="+")
-            widget.bind("<Button-5>", _on_mousewheel, add="+")
+            widget.bindtags(("UltWhatsNewScroll",) + widget.bindtags())
         except Exception:
             pass
         for child in widget.winfo_children():

@@ -1,9 +1,12 @@
 """Предпросмотр наград ультиматума: карточки и уникальные предметы.
 Хранит данные (уровень, моды, база, флейвор, иконки) и кэширует картинки."""
+import collections
+import io
 import json
 import os
 import re
 import threading
+import zipfile
 from urllib.parse import urlparse
 import requests
 from PIL import Image, ImageTk
@@ -17,9 +20,50 @@ except Exception:
     pass
 
 _DB = None
-_IMG_CACHE = {}         # (cache_key, w, h) -> ImageTk.PhotoImage
+_IMG_CACHE = collections.OrderedDict()  # (cache_key, w, h) -> ImageTk.PhotoImage (LRU)
+MAX_IMG_CACHE = 150
+_ZIP_ARC = None
+_ZIP_CHECKED = False
 _PENDING_DOWNLOADS = set()
 _LOCK = threading.Lock()
+
+
+def _cache_put(key, photo):
+    with _LOCK:
+        _IMG_CACHE[key] = photo
+        _IMG_CACHE.move_to_end(key)
+        while len(_IMG_CACHE) > MAX_IMG_CACHE:
+            _IMG_CACHE.popitem(last=False)
+
+
+def _cache_get(key):
+    with _LOCK:
+        if key in _IMG_CACHE:
+            _IMG_CACHE.move_to_end(key)
+            return _IMG_CACHE[key]
+    return None
+
+
+def _read_from_zip(item_type, image_file):
+    global _ZIP_ARC, _ZIP_CHECKED
+    with _LOCK:
+        if not _ZIP_CHECKED:
+            _ZIP_CHECKED = True
+            for zp in (bundled_file("preview_images.zip"), os.path.join(APP_DIR, "preview_images.zip")):
+                if os.path.exists(zp):
+                    try:
+                        _ZIP_ARC = zipfile.ZipFile(zp, "r")
+                        break
+                    except Exception:
+                        _ZIP_ARC = None
+        arc = _ZIP_ARC
+        if arc is None:
+            return None
+        try:
+            data = arc.read(f"{item_type}/{image_file}")
+            return Image.open(io.BytesIO(data))
+        except Exception:
+            return None
 
 
 def load_db():
@@ -120,20 +164,25 @@ def get_preview(item_name, client_lang="ru", to_en_fn=None):
 def get_image(url, max_w=200, max_h=150, on_ready=None, image_file=None, item_type="cards"):
     """Возвращает PhotoImage из локального хранилища preview_images или кэша.
     Если файла нет — запускает фоновую загрузку."""
-    # 1. Сначала проверяем вшитые/локальные файлы программы
+    # 1. Сначала проверяем вшитый ZIP-архив или локальные файлы программы
     if image_file:
-        local_bundled = bundled_file(os.path.join("preview_images", item_type, image_file))
-        if os.path.exists(local_bundled):
-            size_key = (f"bundled_{item_type}_{image_file}", max_w, max_h)
-            with _LOCK:
-                if size_key in _IMG_CACHE:
-                    return _IMG_CACHE[size_key]
+        size_key = (f"bundled_{item_type}_{image_file}", max_w, max_h)
+        cached = _cache_get(size_key)
+        if cached is not None:
+            return cached
+        im = _read_from_zip(item_type, image_file)
+        if im is None:
+            local_bundled = bundled_file(os.path.join("preview_images", item_type, image_file))
+            if os.path.exists(local_bundled):
+                try:
+                    im = Image.open(local_bundled)
+                except Exception:
+                    im = None
+        if im is not None:
             try:
-                im = Image.open(local_bundled)
                 im.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
                 photo = ImageTk.PhotoImage(im)
-                with _LOCK:
-                    _IMG_CACHE[size_key] = photo
+                _cache_put(size_key, photo)
                 return photo
             except Exception:
                 pass
@@ -147,9 +196,9 @@ def get_image(url, max_w=200, max_h=150, on_ready=None, image_file=None, item_ty
         cache_key += ".png"
     size_key = (cache_key, max_w, max_h)
 
-    with _LOCK:
-        if size_key in _IMG_CACHE:
-            return _IMG_CACHE[size_key]
+    cached = _cache_get(size_key)
+    if cached is not None:
+        return cached
 
     local_path = os.path.join(CACHE_DIR, cache_key)
     if os.path.exists(local_path):
@@ -157,8 +206,7 @@ def get_image(url, max_w=200, max_h=150, on_ready=None, image_file=None, item_ty
             im = Image.open(local_path)
             im.thumbnail((max_w, max_h), Image.Resampling.LANCZOS)
             photo = ImageTk.PhotoImage(im)
-            with _LOCK:
-                _IMG_CACHE[size_key] = photo
+            _cache_put(size_key, photo)
             return photo
         except Exception:
             pass

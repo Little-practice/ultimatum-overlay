@@ -25,14 +25,32 @@ def bundled_file(filename):
     return os.path.join(BUNDLE_DIR, filename)
 
 
-def ensure_initial_file(filename, overwrite_if_newer=False):
+def ensure_initial_file(filename, overwrite_if_newer=False, mode=None):
     """Если файла нет в APPDATA, но он зашит в сборку — безопасно копируем его в APPDATA.
-    Если overwrite_if_newer=True и зашитый файл отличается размером или новее — обновляем."""
+    mode:
+      - 'missing': копировать только если файла ещё нет в APPDATA (leagues.json).
+      - 'json_updated': копировать только если dst отсутствует/битый или src['updated'] > dst['updated'].
+      - 'static': копировать если dst отсутствует или отличается размером/новее (items_preview.json).
+    """
+    if mode is None:
+        mode = "json_updated" if overwrite_if_newer else "missing"
     dst = os.path.join(APP_DIR, filename)
     src = bundled_file(filename)
     if os.path.exists(src):
         should_copy = not os.path.exists(dst)
-        if not should_copy and overwrite_if_newer:
+        if not should_copy and mode == "json_updated":
+            try:
+                with open(src, "r", encoding="utf-8") as f:
+                    src_upd = float(json.load(f).get("updated", 0) or 0)
+            except Exception:
+                src_upd = 0.0
+            try:
+                with open(dst, "r", encoding="utf-8") as f:
+                    dst_upd = float(json.load(f).get("updated", 0) or 0)
+                should_copy = src_upd > dst_upd
+            except Exception:
+                should_copy = True
+        elif not should_copy and mode == "static":
             try:
                 should_copy = (os.path.getsize(src) != os.path.getsize(dst) or
                                os.path.getmtime(src) > os.path.getmtime(dst))

@@ -38,11 +38,12 @@ def price_info(txt, prices, div_threshold, life_alert=True, show_preview=True):
     """Текст предмета из Ctrl+C -> всё для карточки цены у курсора."""
     it = parse_item(txt)
     client_lang = "ru" if re.search(r"[\u0400-\u04ff]", txt) else "en"
-    info = {"name": it["name"] or "Предмет", "rarity": it["rarity"], "qty": it["qty"],
+    info = {"name": it["name"] or tr("item_fallback"), "rarity": it["rarity"], "qty": it["qty"],
             "detail": "", "chaos": None, "div": None, "good": False, "shaky": False, "mine": False,
             "net": it["reward"] is not None, "life": it["monster_life"] if life_alert else None,
             "life_lang": client_lang,
             "error": None,
+            "special": None,
             "preview": None,
             "sacrifice_text": it.get("sacrifice"),
             "sacrifice_qty": it.get("sacrifice_qty", 1),
@@ -53,7 +54,10 @@ def price_info(txt, prices, div_threshold, life_alert=True, show_preview=True):
     else:
         chaos, why = value_of(txt, prices)
         if chaos is None:
-            info["error"] = why
+            if why.startswith("SPECIAL:"):
+                info["special"] = why[8:]
+            else:
+                info["error"] = why
         else:
             div = chaos / prices.divine if prices.divine else 0.0
             info.update(chaos=chaos, div=div, good=div >= div_threshold, shaky="c?)" in why, mine="c✎)" in why,
@@ -73,6 +77,8 @@ def price_info(txt, prices, div_threshold, life_alert=True, show_preview=True):
                         info["preview"] = prev
     if info["error"]:
         info["line"] = f"{info['name']}: {info['error']}"
+    elif info["special"]:
+        info["line"] = f"{info['name']} — {info['special']}"
     else:
         c = f"{info['chaos']:.1f}" if info["chaos"] < 10 else f"{info['chaos']:,.0f}".replace(",", " ")
         info["chaos_text"] = c
@@ -142,12 +148,13 @@ class ModAdvisor:
                     or f"{e['tier']} #{order[id(e)] + 1}")
 
         if waves == 10:
-            cands = mods
+            cands = [m for m in mods if m["colored"]] or mods
             good = [m for m in cands if ok(m)]
             if good:
                 pick = min(good, key=lambda m: order[id(m["entry"])])
                 return [(pick["i"], "take", GREEN)], waves, tr("st_10_take", i=pick["i"] + 1, name=name(pick))
-            return [(m["i"], "no", RED) for m in cands], waves, tr("st_10_none")
+            return ([(m["i"], "no" if m["entry"] else "unknown", RED if m["entry"] else ORANGE) for m in cands],
+                    waves, tr("st_10_none"))
         given = [m for m in mods if m["colored"]]
         if given and all(ok(m) for m in given):
             return ([(m["i"], "ok", GREEN) for m in given], waves,
@@ -156,14 +163,17 @@ class ModAdvisor:
                 waves, tr("st_13_no", names=", ".join(name(m) for m in given)))
 
     def unknown_icons(self, mods):
-        """Цветные нераспознанные иконки, которые видны 3 чтения подряд на одном месте (не кадр перехода).
-        -> список картинок, которые стоит добавить в раздел «Мираж». Сам список меняет окно программы."""
+        """Цветные нераспознанные иконки для добавления в раздел «Мираж» (без дубликатов)."""
         if not hasattr(self, "_pending"):
             self._pending = {}
         out = []
+        mirage_imgs = [e["img"] for e in self.lib if e.get("tier") == "Mirage" and e.get("img") is not None]
         for m in mods:
             i = m["i"]
             if not (m["colored"] and m["entry"] is None):
+                self._pending.pop(i, None)
+                continue
+            if any(icons._score(m["img"], mi, True) > 0.75 for mi in mirage_imgs):
                 self._pending.pop(i, None)
                 continue
             prev = self._pending.get(i)
@@ -172,8 +182,10 @@ class ModAdvisor:
             else:
                 cnt = 1
             self._pending[i] = (m["img"], cnt)
-            if cnt == 2:
+            if m.get("score", 1.0) < 0.35 or cnt >= 2:
                 out.append(m["img"])
+                mirage_imgs.append(m["img"])
+                self._pending.pop(i, None)
         return out
 
     def double_down(self):

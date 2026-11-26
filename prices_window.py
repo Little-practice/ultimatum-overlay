@@ -133,11 +133,23 @@ class PricesWindow:
         self.hint.configure(text=tr("hint_" + key))
         self.fill()
 
+    def _all_keys(self):
+        p = self.p
+        return set(p.chaos) | set(p.variants) | set(p.custom)
+
+    def _price_of(self, k):
+        p = self.p
+        if k in p.custom:
+            return p.custom[k]
+        if k in p.variants:
+            return p.variants[k]
+        return p.chaos.get(k)
+
     def rows(self):
         p = self.p
-        keys = set(p.chaos) | set(p.custom)
+        keys = self._all_keys()
         if self.tab == "low":
-            keys = {k for k in keys if k in p.low}
+            keys = {k for k in keys if (k in p.low or k in p.low_variants) and k not in p.custom}
         elif self.tab == "mine":
             keys = {k for k in keys if k in p.custom}
         q = self.q.get().strip().lower()
@@ -145,23 +157,28 @@ class PricesWindow:
             q_yo = q.replace("ё", "е")
             # по-русски ищем через словарь русских названий (учитывая ё/е)
             en = {k for k, r in p.ru_names.items() if q_yo in r.lower().replace("ё", "е")} if not q.isascii() else set()
-            keys = {k for k in keys if q in k or k in en}
-        return sorted(keys, key=lambda k: -(p.custom.get(k) or p.chaos.get(k) or 0))
+            keys = {k for k in keys if q in k or k in en or (
+                "@" in k and (k.split("@", 1)[0] in en or k.split("@", 1)[1] in en))}
+        return sorted(keys, key=lambda k: -(self._price_of(k) or 0))
 
     def fill(self):
         p = self.p
         self.tv.delete(*self.tv.get_children())
+        all_keys = self._all_keys()
         for k in self.rows()[:3000]:
-            ninja, mine = p.chaos.get(k), p.custom.get(k)
+            ninja = p.variants.get(k) if "@" in k else p.chaos.get(k)
+            mine = p.custom.get(k)
             val = mine if mine is not None else ninja
             div = f"{val / p.divine:.2f}" if val is not None and p.divine else ""
-            tag = "mine" if mine is not None else "low" if k in p.low else ""
+            is_low = (k in p.low or k in p.low_variants)
+            tag = "mine" if mine is not None else "low" if is_low else ""
+            base_k = k.split("@", 1)[0] if "@" in k else k
             self.tv.insert("", "end", iid=k, tags=(tag,),
-                           values=(p.display(k, self.names_lang) + ("  ?" if tag == "low" else ""), i18n.cat(p.cat.get(k)),
+                           values=(p.display(k, self.names_lang) + ("  ?" if tag == "low" else ""), i18n.cat(p.cat.get(base_k)),
                                    fmt_c(ninja), fmt_c(mine), div))
-        n_low = sum(1 for k in p.chaos if k in p.low)
+        n_low = sum(1 for k in all_keys if (k in p.low or k in p.low_variants) and k not in p.custom)
         for k, (b, title) in self.tab_btns.items():
-            cnt = {"all": len(p.chaos), "low": n_low, "mine": len(p.custom)}[k]
+            cnt = {"all": len(all_keys), "low": n_low, "mine": len(p.custom)}[k]
             b.configure(text=f"{tr(title)}  {cnt}")
         self.info.configure(text=f"{p.league}  ·  1 div = {p.divine:.0f} c" if p.divine else tr("prices_loading"))
         self.shown_at = p.updated
@@ -176,11 +193,11 @@ class PricesWindow:
             return
         self.key = sel[0]
         p = self.p
-        ninja = p.chaos.get(self.key)
+        ninja = p.variants.get(self.key) if "@" in self.key else p.chaos.get(self.key)
         self.sel_lbl.configure(text=p.display(self.key, self.names_lang))
         self.pv.set(fmt_c(p.custom[self.key]).replace(" ", "") if self.key in p.custom else "")
-        self.msg.configure(text=f"poe.ninja: {fmt_c(ninja)} c" + (f"  ·  {tr('low_data_short')}" if self.key in p.low
-                                                                    else "")
+        is_low = self.key in p.low or self.key in p.low_variants
+        self.msg.configure(text=f"poe.ninja: {fmt_c(ninja)} c" + (f"  ·  {tr('low_data_short')}" if is_low else "")
                            if ninja is not None else tr("not_on_ninja"), fg=T.MUTED)
 
     def save(self):

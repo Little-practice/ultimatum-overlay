@@ -1,11 +1,23 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os, zipfile
+
+os.makedirs('build', exist_ok=True)
+_zip_path = os.path.join('build', 'preview_images.zip')
+with zipfile.ZipFile(_zip_path, 'w', compression=zipfile.ZIP_STORED) as _zf:
+    for _cat in ('cards', 'uniques'):
+        _dir = os.path.join('preview_images', _cat)
+        if os.path.isdir(_dir):
+            for _fn in sorted(os.listdir(_dir)):
+                _fp = os.path.join(_dir, _fn)
+                if os.path.isfile(_fp):
+                    _zf.write(_fp, f'{_cat}/{_fn}')
 
 
 a = Analysis(
     ['main.py'],
     pathex=[],
     binaries=[],
-    datas=[('icons', 'icons_default'), ('names_ru.json', '.'), ('prices_cache.json', '.'), ('leagues.json', '.'), ('items_preview.json', '.'), ('preview_images', 'preview_images')],
+    datas=[('icons', 'icons_default'), ('names_ru.json', '.'), ('prices_cache.json', '.'), ('leagues.json', '.'), ('items_preview.json', '.'), (_zip_path, '.')],
     hiddenimports=['pystray._win32', 'psutil'],
     hookspath=[],
     hooksconfig={},

@@ -2,6 +2,10 @@
 config.json
 my_prices.json
 custom_sound.wav
+app.pid
+pending_update.exe
+pending_update.exe.part
+pending_update.json
 cache/
 *.tmp
 

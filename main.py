@@ -20,7 +20,7 @@ import i18n
 import icon_data
 import icons
 import theme as T
-from hotkeys import MOD_CTRL, MOD_SHIFT, Hotkey, KeyWatch, beep, custom_sound_path, key_name
+from hotkeys import MOD_CTRL, MOD_SHIFT, MOUSE_VKS, Hotkey, KeyWatch, beep, custom_sound_path, key_name
 from i18n import tr
 from overlay import Overlay
 from paths import APP_DIR, ensure_initial_file, restore_default_icons, write_json
@@ -29,10 +29,10 @@ from prices_window import PricesWindow
 import share
 import system
 from whats_new import show_whats_new
-from screen import DD_BOX, Screen, clipboard_seq, cursor_pos, poe_running
+from screen import DD_BOX, Screen, clipboard_seq, cursor_pos, poe_foreground, poe_is_elevated_mismatch, poe_running
 from watcher import GREEN, ModAdvisor, is_item_text, mod_box, price_info
 
-VERSION = "1.4.2"
+VERSION = "1.4.3"
 CFG_FILE = os.path.join(APP_DIR, "config.json")
 DEFAULT_CFG = {
     "lang": "ru",
@@ -172,10 +172,10 @@ class App:
         root.configure(bg=T.BG)
         T.apply_ttk(root)
         self.cfg = load_cfg()
-        ensure_initial_file("names_ru.json", overwrite_if_newer=True)
-        ensure_initial_file("prices_cache.json", overwrite_if_newer=True)
-        ensure_initial_file("leagues.json", overwrite_if_newer=True)
-        ensure_initial_file("items_preview.json", overwrite_if_newer=True)
+        ensure_initial_file("names_ru.json", mode="json_updated")
+        ensure_initial_file("prices_cache.json", mode="json_updated")
+        ensure_initial_file("leagues.json", mode="missing")
+        ensure_initial_file("items_preview.json", mode="static")
         i18n.set_lang(self.cfg["lang"])
         self.scr = Screen()
         self.scr.dx, self.scr.dy = self.cfg["offset_x"], self.cfg["offset_y"]
@@ -185,23 +185,28 @@ class App:
         self.started = time.time()
         self._last_check_update = self.started
         self._updating = False
+        self._ready_update = None
+        self._has_altar_boxes = False
         self._ui_cache = {}
         self.status = ""
         self.pw = None            # окно «Цены»
-        self.redraw_marks = False
         self.log_lines = []       # чтобы лог пережил смену языка
         self.container = None
         self.leagues = [self.cfg["league"]]
         self.hidden = False
         self.hk_hide = None
-        self.hk_scan = None
         self._icon = tk.PhotoImage(data=icon_data.PNG)
         root.iconphoto(True, self._icon)
         self.build()
         self.overlay = Overlay(root, self.scr)
-        self.start_hotkey()
-        self.kw = KeyWatch(on_dismiss=lambda: self.overlay.boxes and self.ui.put(("dismiss_altar",)))  # Esc/Пробел снимают оверлей
+        self.kw = KeyWatch(
+            on_dismiss=lambda: self._has_altar_boxes and self.ui.put(("dismiss_altar",)),
+            on_scan=lambda: self.ui.put(("scan_ultimatum",)),
+            on_hide=lambda: self.ui.put(("toggle_overlay",)),
+            is_poe_fg=poe_foreground,
+        )
         self.kw.start()
+        self.start_hotkey()
         self.tray = None
         self.tray_hint_shown = False
         self.make_tray()
@@ -261,6 +266,10 @@ class App:
         self.price_lbl.pack(side="right", pady=(8, 0), padx=12)
         self.poe_lbl = tk.Label(head, text="", bg=T.BG, font=(T.SANS, 9, "bold"))
         self.poe_lbl.pack(side="right", pady=(8, 0), padx=(12, 0))
+        self.upd_btn = T.button(head, "", self.apply_ready_update, fg=T.BG, bg=T.GOLD, hover=T.GOLD_HI, small=True)
+        if self._ready_update:
+            self.upd_btn.configure(text=tr("update_badge", v=self._ready_update))
+            self.upd_btn.pack(side="right", pady=(6, 0), padx=(10, 0))
         tk.Frame(root, bg=T.GOLD, height=1).pack(fill="x", padx=16)
 
         # --- подвал: автор, ссылки, поддержать ---
@@ -448,7 +457,6 @@ class App:
             self.pw.win.destroy()
             self.pw = None
         self.build()
-        self.redraw_marks = True  # подписи над модами — на новом языке
         if self.tray:
             self.make_tray()
         if reopen:
@@ -509,7 +517,6 @@ class App:
         e["allowed"] = bool(value)
         icons.save_library(self.advisor.lib)
         self.update_counts()
-        self.redraw_marks = True
 
     def set_name(self, e, v):
         name = v.get().strip()
@@ -528,7 +535,6 @@ class App:
             lib[n], lib[m] = lib[m], lib[n]
             icons.save_library(lib)
             self.render_icons()
-            self.redraw_marks = True
 
     def remove(self, e):
         self.advisor.lib.remove(e)
@@ -600,7 +606,6 @@ class App:
             return
         icons.save_library(self.advisor.lib)
         self.render_icons()
-        self.redraw_marks = True
         self.log(tr("pasted", n=n) + (tr("pasted_missing", m=miss) if miss else ""))
 
     # ---------------- справка ----------------
@@ -649,8 +654,6 @@ class App:
                 self.tray.stop()
             if getattr(self, "hk_hide", None):
                 self.hk_hide.stop()
-            if getattr(self, "hk_scan", None):
-                self.hk_scan.stop()
             if getattr(self, "kw", None):
                 self.kw.stop()
         finally:
@@ -680,22 +683,23 @@ class App:
     def check_update(self):
         found = system.check_update(VERSION)
         if found:
-            self.ui.put(("update", *found))
+            ver, url, sha = found
+            try:
+                if system.stage_update(ver, url, sha):
+                    self.ui.put(("update_ready", ver))
+            except Exception as ex:
+                self.log(tr("update_err", e=ex))
 
-    def run_update(self, ver, url, sha=None):
-        if getattr(self, "_updating", False):
+    def apply_ready_update(self):
+        if getattr(self, "_updating", False) or not self._ready_update:
             return
         self._updating = True
-        self.log(tr("updating", v=ver))
-
-        def work():
-            try:
-                system.install_update(url, sha)
-                self.ui.put(("quit",))
-            except Exception as ex:
-                self._updating = False
-                self.log(tr("update_err", e=ex))
-        threading.Thread(target=work, daemon=True).start()
+        self.log(tr("updating", v=self._ready_update))
+        extra = ["--tray"] if self.hidden else None
+        if system.apply_staged_update(VERSION, extra_args=extra):
+            self.ui.put(("quit",))
+        else:
+            self._updating = False
 
     # ---------------- лиги ----------------
     def load_leagues(self):
@@ -725,22 +729,20 @@ class App:
     def start_hide_hotkey(self):
         if getattr(self, "hk_hide", None):
             self.hk_hide.stop()
+            self.hk_hide = None
         vk, mods = self.cfg.get("hide_key", [0x48, MOD_CTRL | MOD_SHIFT])
-        self.hk_hide = Hotkey(vk, mods, lambda: self.ui.put(("toggle_overlay",)))
-        self.hk_hide.start()
-        self.hk_hide.ready.wait(1)
-        if not self.hk_hide.ok:
-            self.log(tr("key_busy", k=key_name(vk, mods)))
+        if self.kw.ok:
+            self.kw.set_bindings(hide_key=(vk, mods))
+        else:
+            self.hk_hide = Hotkey(vk, mods, lambda: self.ui.put(("toggle_overlay",)))
+            self.hk_hide.start()
+            self.hk_hide.ready.wait(1)
+            if not self.hk_hide.ok:
+                self.log(tr("key_busy", k=key_name(vk, mods)))
 
     def start_scan_hotkey(self):
-        if getattr(self, "hk_scan", None):
-            self.hk_scan.stop()
         vk, mods = self.cfg.get("scan_key", [0x71, 0])
-        self.hk_scan = Hotkey(vk, mods, lambda: self.ui.put(("scan_ultimatum",)))
-        self.hk_scan.start()
-        self.hk_scan.ready.wait(1)
-        if not self.hk_scan.ok:
-            self.log(tr("key_busy", k=key_name(vk, mods)))
+        self.kw.set_bindings(scan_key=(vk, mods))
 
     def start_hotkey(self):
         self.start_hide_hotkey()
@@ -773,14 +775,14 @@ class App:
             dd = self.cfg["dd_enabled"] and has_rewards and self.advisor.double_down()
             if dd:
                 self.ui.put(("box", "dd", *DD_BOX, tr("dd_chip"), GREEN, True, "rect", dur))
-                if self.cfg["sound"]:
-                    beep("info")
             else:
                 self.ui.put(("clear", "dd"))
 
             if not self.cfg["mods_enabled"]:
                 self.ui.put(("clear", "mod"))
                 self.status = ""
+                if dd and self.cfg["sound"]:
+                    beep("info")
             else:
                 mods = self.advisor.read()
                 for img in self.advisor.unknown_icons(mods):
@@ -789,6 +791,11 @@ class App:
                 self.ui.put(("clear", "mod"))
                 for i, code, color in marks:
                     self.ui.put(("box", f"mod{i}", *mod_box(i), tr("chip_" + code), color, False, "ring", dur))
+                if self.cfg["sound"]:
+                    if any(code == "no" for _, code, _ in marks):
+                        beep("alert")
+                    elif dd:
+                        beep("info")
                 self.status = status
                 self.log(f"{tr('ultimatum_card')}: {status}")
         except Exception as ex:
@@ -797,21 +804,26 @@ class App:
     def capture_key(self, target="hide_key"):
         btn = self.scan_key_btn if target == "scan_key" else self.key_btn
         btn.configure(text=tr("press_key"))
-        # Временно снимаем перехватываемый хоткей, чтобы старая клавиша (напр. F2) дошла до окна
-        hk = self.hk_scan if target == "scan_key" else self.hk_hide
-        if hk:
-            hk.stop()
+        if target == "hide_key" and getattr(self, "hk_hide", None):
+            self.hk_hide.stop()
+            self.hk_hide = None
+        self.kw.set_bindings(paused=True)
         self.root.focus_force()
 
         def finish(save=False, keycode=0, mods=0):
             self.root.unbind("<KeyPress>")
             self.root.unbind("<FocusOut>")
+            self.kw.set_mouse_capture(None)
+            self.kw.set_bindings(paused=False)
             if save:
-                is_fn = (0x70 <= keycode <= 0x87) or (0x60 <= keycode <= 0x6F) or keycode in (
+                is_fn = (0x70 <= keycode <= 0x87) or (0x60 <= keycode <= 0x6F) or (keycode in MOUSE_VKS) or keycode in (
                     0x2D, 0x2E, 0x24, 0x23, 0x21, 0x22, 0x13, 0x91, 0xC0)
-                bad = (not mods and not is_fn) or (mods == MOD_CTRL and keycode in (0x41, 0x43, 0x56, 0x58, 0x5A))
+                if target == "scan_key":
+                    bad = (keycode in (0x1B, 0x20, 0x0D)) or (mods == MOD_CTRL and keycode in (0x41, 0x43, 0x56, 0x58, 0x5A))
+                else:
+                    bad = (not mods and not is_fn) or (mods == MOD_CTRL and keycode in (0x41, 0x43, 0x56, 0x58, 0x5A))
                 if bad:
-                    self.log(tr("key_bad"))
+                    self.log(tr("key_bad_scan" if target == "scan_key" else "key_bad"))
                 else:
                     self.cfg[target] = [keycode, mods]
                     self.save_cfg()
@@ -821,6 +833,8 @@ class App:
                 self.start_hide_hotkey()
             if btn.winfo_exists():
                 btn.configure(text=key_name(*self.cfg[target]))
+
+        self.kw.set_mouse_capture(lambda vk, mods: self.root.after(0, lambda: finish(True, vk, mods)))
 
         def on_key(ev):
             if ev.keycode in (16, 17, 18, 91, 92):  # одиночные Shift/Ctrl/Alt/Win — ждём основную клавишу
@@ -921,11 +935,14 @@ class App:
                 self.overlay.price_card("price", *a, seconds=float(self.cfg["label_seconds"]))
             elif kind == "box":
                 self.overlay.set_box(*a)
+                self._has_altar_boxes = True
             elif kind == "clear":
                 self.overlay.clear_boxes(a[0])
+                self._has_altar_boxes = any(k.startswith("mod") or k == "dd" for k in self.overlay.boxes)
             elif kind == "dismiss_altar":
                 if any(k.startswith("mod") or k == "dd" for k in self.overlay.boxes):
                     self.overlay.clear_boxes("")
+                self._has_altar_boxes = False
             elif kind == "icons":
                 self.render_icons()
             elif kind == "leagues":
@@ -939,8 +956,14 @@ class App:
             elif kind == "quit":
                 self.quit()
                 return "quit"
-            elif kind == "update":
-                self.run_update(*a)
+            elif kind == "update_ready":
+                ver = a[0]
+                if self._ready_update != ver:
+                    self._ready_update = ver
+                    self.log(tr("update_staged", v=ver), gold=True)
+                    if self.upd_btn.winfo_exists():
+                        self.upd_btn.configure(text=tr("update_badge", v=ver))
+                        self.upd_btn.pack(side="right", pady=(6, 0), padx=(10, 0))
             elif kind == "learn":
                 icons.add_icon(self.advisor.lib, a[0], tier="Mirage", allowed=False)
                 icons.save_library(self.advisor.lib)
@@ -958,10 +981,17 @@ class App:
             cache["status"] = self.status
             self.status_lbl.configure(text=self.status)
         found = poe_running()
-        if cache.get("poe") != found:
-            cache["poe"] = found
-            self.poe_lbl.configure(text=tr("poe_found") if found else tr("poe_missing"),
-                                   fg=T.GREEN if found else T.ORANGE)
+        mismatch = poe_is_elevated_mismatch() if found else False
+        poe_state = (found, mismatch)
+        if cache.get("poe") != poe_state:
+            cache["poe"] = poe_state
+            if not found:
+                self.poe_lbl.configure(text=tr("poe_missing"), fg=T.ORANGE)
+            elif mismatch:
+                self.poe_lbl.configure(text=tr("poe_admin_warn"), fg=T.ORANGE)
+            else:
+                self.poe_lbl.configure(text=tr("poe_found"), fg=T.GREEN)
+        self._has_altar_boxes = any(k.startswith("mod") or k == "dd" for k in self.overlay.boxes)
         if cache.get("hid") != self.hidden:
             cache["hid"] = self.hidden
             self.hidden_lbl.configure(text=tr("overlay_hidden") if self.hidden else tr("overlay_shown"),
@@ -1005,10 +1035,15 @@ class App:
                 if s != seq:
                     seq = s
                     time.sleep(0.05)
-                    try:
-                        txt = pyperclip.paste()
-                    except Exception:
-                        txt = ""
+                    txt = ""
+                    for _ in range(3):
+                        try:
+                            txt = pyperclip.paste()
+                            if txt:
+                                break
+                        except Exception:
+                            pass
+                        time.sleep(0.02)
                     # карточку показываем только на Ctrl+C самого игрока
                     if is_item_text(txt) and self.kw.user_copied(time.monotonic()):
                         x, y = cursor_pos()
@@ -1123,6 +1158,8 @@ def single_instance():
 
 
 if __name__ == "__main__":
+    if system.apply_staged_update(VERSION, extra_args=["--tray"] if "--tray" in sys.argv else None):
+        sys.exit(0)
     single_instance()
     root = tk.Tk()
     App(root)
